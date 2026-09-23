@@ -53,7 +53,11 @@ def json_for_script(data: dict) -> str:
     every <, > and & as a \\u escape keeps the JSON identical once parsed.
     """
     text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    text = text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    # Evidence decoded with errors="replace" carries U+FFFD wherever a response
+    # was not valid UTF-8 (the UTF-16 protocol test, Latin-1 pages). Written as
+    # an escape it parses to the same string and does not read as a damaged file.
+    return text.replace("�", "\\ufffd")
 
 
 def render(data: dict, standalone: bool = True) -> str:
