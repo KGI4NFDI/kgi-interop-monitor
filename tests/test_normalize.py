@@ -74,3 +74,7 @@ def test_http_gets_an_https_candidate():
 
 def test_not_a_url_has_no_candidates():
     assert candidates("work in progress") == []
+
+
+def test_nomisma_style_query_path():
+    assert "https://nomisma.org/query" in candidates("https://nomisma.org/sparql/")

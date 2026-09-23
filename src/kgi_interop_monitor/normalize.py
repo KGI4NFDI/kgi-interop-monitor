@@ -118,6 +118,9 @@ def candidates(url: str) -> list[str]:
         add(f"{root}/sparql")
         add(f"{root}/bigdata/namespace/wdq/sparql")
     add(f"{root}/sparql")
+    # Fuseki-style services answer on /query (Nomisma does, next to a UI at
+    # /sparql/). A query web page there just fails the check, cheaply.
+    add(f"{root}/query")
     # QLever UI deployments serve the API under /api/.
     add(f"{root}/api/")
     if parts.scheme == "http":
