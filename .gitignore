@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+.pytest_cache/
+
+# Local run output. Scheduled results live on the orphan `results` branch,
+# never on main (see docs/decisions/0006-results-branch.md).
+/results/
+/site/
+/out/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+desktop.ini
+Thumbs.db
