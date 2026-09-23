@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from datetime import datetime, timezone
 
 from kgi_interop_monitor import history

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .sparql import RDF_MEDIA, _parse_json, _parse_xml, QueryResult
+from .sparql import _parse_json, _parse_xml, QueryResult
 from .transport import Exchange, exchange
 
 MANIFEST = "https://github.com/w3c/rdf-tests/blob/main/sparql/sparql11/protocol/manifest.ttl"
