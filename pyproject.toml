@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kgi-interop-monitor"
+dynamic = ["version"]
+description = "Query-layer monitor for the SPARQL endpoints in the KGI4NFDI registry (D2.1 checklist)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Daniel Viladrich" }]
+dependencies = [
+  "rdflib>=7.0",
+  "certifi>=2024.2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+kgi-interop-monitor = "kgi_interop_monitor.cli:main"
+
+[tool.hatch.version]
+path = "src/kgi_interop_monitor/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kgi_interop_monitor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "live: talks to real endpoints on the internet (deselected by default)",
+]
+addopts = "-m 'not live'"
