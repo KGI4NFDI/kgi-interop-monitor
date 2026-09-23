@@ -1,0 +1,29 @@
+# registry_records: every dataset in the KGI registry with its access points.
+#
+# dcat:endpointURL sits on a dcat:DataService that points at the dataset with
+# dcat:servesDataset. It is not a property of the dataset or its distribution.
+# Looking there is how the first census reported 0 endpoints instead of 28
+# (D21_CHECKLIST.md, "Two lessons about the instrument").
+#
+# ISIRI / DATATYPE are selected so the monitor can see how each endpoint value
+# is represented: DCAT gives dcat:endpointURL the range rdfs:Resource.
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+SELECT ?dataset ?title ?landing ?service ?endpoint
+       (ISIRI(?endpoint) AS ?endpointIsIri) (DATATYPE(?endpoint) AS ?endpointDatatype)
+       ?download ?access
+WHERE {
+  ?dataset a dcat:Dataset .
+  OPTIONAL { ?dataset dcterms:title ?title }
+  OPTIONAL { ?dataset dcat:landingPage ?landing }
+  OPTIONAL {
+    ?service a dcat:DataService ;
+             dcat:servesDataset ?dataset .
+    OPTIONAL { ?service dcat:endpointURL ?endpoint }
+  }
+  OPTIONAL {
+    ?dataset dcat:distribution ?distribution .
+    OPTIONAL { ?distribution dcat:downloadURL ?download }
+    OPTIONAL { ?distribution dcat:accessURL ?access }
+  }
+}
