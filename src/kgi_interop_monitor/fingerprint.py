@@ -53,6 +53,7 @@ SIGNATURES: list[Signature] = [
 ]
 
 RANK = {"header": 0, "body": 1, "url": 2}
+ERROR_JSON = re.compile(rb'\s*\{\s*"(?:error|exception)"')
 
 
 def _error_like(x: Exchange) -> bool:
@@ -62,8 +63,7 @@ def _error_like(x: Exchange) -> bool:
         return False
     if x.status is not None and x.status >= 400:
         return True
-    head = x.body[:200].lstrip()
-    return x.purpose.startswith("B2") or head.startswith(b'{"error"') or head.startswith(b'{"exception"')
+    return x.purpose.startswith("B2") or bool(ERROR_JSON.match(x.body[:200]))
 
 
 def identify(exchanges: list[Exchange]) -> dict:
