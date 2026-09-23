@@ -48,3 +48,8 @@ def test_unknown_and_blocked_do_not_clear_a_gate():
 
 def test_warn_and_na_clear_a_gate():
     assert grade(results(C2=Outcome.WARN, C4=Outcome.NA), has_working_url=True) == "C"
+
+
+def test_unmeasured_layers_do_not_count_as_cleared():
+    only_a = {pid: r for pid, r in results().items() if pid.startswith("A")}
+    assert grade(only_a, has_working_url=True) == "A"
