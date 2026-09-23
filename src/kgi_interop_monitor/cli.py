@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import gzip
-import json
 import sys
 from pathlib import Path
 
-from . import __version__, registry
+from . import __version__, history, registry
 from .model import SPECS
 from .runner import CONTROL_URL, RunConfig, run
 
@@ -30,14 +28,6 @@ def table(report: dict) -> str:
     return "\n".join(lines)
 
 
-def write_report(report: dict, out: Path) -> Path:
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / f"run-{report['run_id']}.json.gz"
-    with gzip.open(path, "wt", encoding="utf-8") as fh:
-        json.dump(report, fh, ensure_ascii=False, indent=1)
-    return path
-
-
 def cmd_run(args: argparse.Namespace) -> int:
     config = RunConfig(
         registry_endpoint=args.registry,
@@ -51,10 +41,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         read_timeout=args.read_timeout,
     )
     report = run(config)
-    path = write_report(report, Path(args.out))
+    written = history.record(report, Path(args.results))
+    paths = ", ".join(str(p) for p in written.values())
     if report["status"] != "ok":
         print(f"run {report['run_id']}: {report['status']}: {report.get('status_detail', '')}", file=sys.stderr)
-        print(f"wrote {path}")
+        print(f"wrote {paths}")
         return 2
     print(table(report))
     s = report["summary"]
@@ -64,7 +55,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"registry {finding['id']} [{finding['outcome']}] {finding['summary']}")
     for finding in report.get("hub_findings", []):
         print(f"hub      {finding['id']} [{finding['outcome']}] {finding['summary']}")
-    print(f"wrote {path}")
+    print(f"wrote {paths}")
     return 0
 
 
@@ -83,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--heavy", action="store_true", help="also run scan-prone probes on large endpoints")
     p.add_argument("--connect-timeout", type=float, default=10.0)
     p.add_argument("--read-timeout", type=float, default=30.0)
-    p.add_argument("--out", default="results/runs", help="directory for the run file")
+    p.add_argument("--results", default="results", help="results directory (latest.json, history.jsonl, runs/)")
     p.set_defaults(func=cmd_run)
 
     args = parser.parse_args(argv)
