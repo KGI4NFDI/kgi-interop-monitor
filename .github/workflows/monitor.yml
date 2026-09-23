@@ -1,0 +1,99 @@
+# Scheduled monitoring of the KGI registry's SPARQL endpoints.
+#
+# Every six hours: run the checklist ladder (layers A to C), append the result
+# to the history on the orphan `results` branch, rebuild the status page there
+# and keep the page as a workflow artifact. Nothing is ever written to main
+# (docs/decisions/0006-results-branch.md).
+
+name: Monitor
+
+on:
+  schedule:
+    # 17 minutes past, every six hours: off the top of the hour, when every
+    # other scheduled job on GitHub starts, and rare enough to be polite to
+    # partners whose endpoints run on a single machine (ADR 0004).
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      layers:
+        description: "Layers to run"
+        default: "ABC"
+      heavy:
+        description: "Also run scan-prone probes on stores above the size gate"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out the monitor
+        uses: actions/checkout@v4
+
+      - name: Check out the results branch
+        uses: actions/checkout@v4
+        with:
+          ref: results
+          path: results-branch
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install .
+
+      - name: Run the ladder
+        id: run
+        env:
+          # Lets C4 and C5 read GitHub releases with the authenticated rate limit.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          heavy=""
+          if [ "${{ inputs.heavy }}" = "true" ]; then heavy="--heavy"; fi
+          kgi-interop-monitor run --layers "${{ inputs.layers || 'ABC' }}" $heavy \
+            --results results-branch/results | tee run.txt
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # An unhealthy run (exit 2) is still recorded: the gap in the
+          # history is information. Anything else is a bug in the monitor.
+          if [ "$status" != "0" ] && [ "$status" != "2" ]; then exit "$status"; fi
+
+      - name: Build the status page
+        run: kgi-interop-monitor page --results results-branch/results --out results-branch/site/index.html
+
+      - name: Commit the results
+        working-directory: results-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          run_id=$(python -c "import json; print(json.load(open('results/latest.json'))['run_id'])")
+          summary=$(python -c "import json; s=json.load(open('results/latest.json')).get('summary', {}); print(', '.join(f'{g} {n}' for g, n in sorted(s.get('grades', {}).items())))")
+          git add results site
+          git commit -m "Run ${run_id}: ${summary:-no judgement}" -m "Vantage github-actions/linux. Workflow run ${{ github.run_id }}."
+          git push
+
+      - name: Keep the page as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-page-${{ github.run_number }}
+          path: results-branch/site/index.html
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## Query-layer monitor'
+            echo '```'
+            cat run.txt 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
