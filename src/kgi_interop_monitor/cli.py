@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, history, registry
+from . import __version__, history, page, registry
 from .model import SPECS
 from .runner import CONTROL_URL, RunConfig, run
 
@@ -59,6 +59,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_page(args: argparse.Namespace) -> int:
+    out = page.build(Path(args.results), Path(args.out), standalone=not args.fragment)
+    print(f"wrote {out} ({out.stat().st_size // 1024} KB)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="kgi-interop-monitor", description=__doc__)
     parser.add_argument("--version", action="version", version=__version__)
@@ -76,6 +82,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--read-timeout", type=float, default=30.0)
     p.add_argument("--results", default="results", help="results directory (latest.json, history.jsonl, runs/)")
     p.set_defaults(func=cmd_run)
+
+    q = sub.add_parser("page", help="build the status page from a results directory")
+    q.add_argument("--results", default="results")
+    q.add_argument("--out", default="site/index.html")
+    q.add_argument("--fragment", action="store_true",
+                   help="write the page without the document wrapper (for hosts that add their own)")
+    q.set_defaults(func=cmd_page)
 
     args = parser.parse_args(argv)
     return args.func(args)

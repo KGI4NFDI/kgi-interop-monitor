@@ -20,3 +20,6 @@ dist/
 .DS_Store
 desktop.ini
 Thumbs.db
+
+# Local tool configuration
+.claude/
