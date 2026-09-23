@@ -386,6 +386,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
   var LAYERS = [["A", "Addressing"], ["B", "Protocol"], ["C", "Content"]];
   var KP = (D.kpis && D.kpis.kgs) || {};
   var WINDOW = (D.kpis && D.kpis.window_days) || 7;
+  var VANTAGE = (D.kpis && D.kpis.latency_vantage) || "this vantage point";
   var GRADE_ORDER = ["none", "dump", "A*", "A", "B", "C"];
   var GRADE_TEXT = {
     "none": "No working SPARQL endpoint and nothing else to offer.",
@@ -648,7 +649,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
       gradeTd.appendChild(h("span", { "class": "fixed", title: "Grade if the registry record were fixed" }, "→", gradeChip(k.grade_if_registry_fixed, true)));
     }
     var lat = kp.available && kp.latency_ms != null
-      ? h("span", { "class": "lat", title: hist.latency_p50 != null ? "Median over the window " + Math.round(hist.latency_p50) + " ms, 95th percentile " + Math.round(hist.latency_p95) + " ms" : "" },
+      ? h("span", { "class": "lat", title: hist.latency_p50 != null ? "From " + VANTAGE + ": median over the window " + Math.round(hist.latency_p50) + " ms, 95th percentile " + Math.round(hist.latency_p95) + " ms" : "" },
           h("span", { "class": "num" }, Math.round(kp.latency_ms) + " ms"), sparkline(hist.series))
       : h("span", { "class": "err" }, errorLabel(k));
     var up = hist.availability != null
@@ -788,7 +789,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
     if (eng) fact("Engine", eng.engine ? [engineName(k), h("div", { "class": "muted" }, eng.evidence || "")] : h("span", { "class": "muted" }, "not identified" + (eng.server_headers && eng.server_headers.length ? " (Server: " + eng.server_headers.join(", ") + ")" : "")));
     if (kp.available) {
       fact("Latency", (kp.latency_ms != null ? Math.round(kp.latency_ms) + " ms median of " + (kp.latency_samples_ms || []).length + " ASK requests" : "—") +
-        (hist.latency_p50 != null ? "; " + Math.round(hist.latency_p50) + " ms median, " + Math.round(hist.latency_p95) + " ms 95th percentile over " + runsText(hist.runs) : ""));
+        (hist.latency_p50 != null ? "; " + Math.round(hist.latency_p50) + " ms median, " + Math.round(hist.latency_p95) + " ms 95th percentile over the window, measured from " + VANTAGE : ""));
     }
     if (hist.availability != null) fact("Answered", Math.round(hist.availability) + "% of " + runsText(hist.runs) + " in the last " + WINDOW + " days" + (hist.flaps ? ", " + hist.flaps + " changes" : ""));
     if (kp.triples != null) fact("Triples", fmtInt(kp.triples) + " in the default graph" + (kp.named_graphs ? ", " + kp.named_graphs + " named graphs" : "") + (kp.triples_mode ? " (triples mode, no named graphs)" : ""));

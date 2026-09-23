@@ -36,15 +36,15 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Check out the monitor
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check out the results branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: results
           path: results-branch
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -82,7 +82,7 @@ jobs:
           git push
 
       - name: Keep the page as an artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: status-page-${{ github.run_number }}
           path: results-branch/site/index.html

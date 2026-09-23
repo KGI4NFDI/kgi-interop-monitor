@@ -100,34 +100,40 @@ def _percentile(values: list[float], q: float) -> float | None:
     return round(ranked[lo] + (ranked[hi] - ranked[lo]) * (k - lo), 1)
 
 
-def kpis(entries: list[dict], days: int = 7, now: datetime | None = None) -> dict:
+def kpis(entries: list[dict], days: int = 7, now: datetime | None = None, vantage: str | None = None) -> dict:
     """Per KG over the window: availability, latency percentiles, flaps and
     the series the page draws. Runs where the instrument itself was unhealthy
-    are excluded: they say nothing about the endpoints."""
+    are excluded: they say nothing about the endpoints.
+
+    Latency is only comparable from one vantage point: the same endpoints
+    measured 109 ms (median) from a German desktop and 416 ms from a GitHub
+    runner on 2026-09-23. With ``vantage`` set, latency statistics and the
+    latency series use only runs from that vantage; availability uses all."""
     now = now or datetime.now(timezone.utc)
     since = now - timedelta(days=days)
     valid = [e for e in entries if e["status"] == "ok" and datetime.fromisoformat(e["started_at"]) >= since]
     out: dict[str, dict] = {}
     for entry in valid:
+        same_vantage = vantage is None or entry.get("vantage") == vantage
         for kid, k in entry["kgs"].items():
             s = out.setdefault(kid, {"runs": 0, "available": 0, "latency": [], "flaps": 0, "series": [], "_last": None})
             s["runs"] += 1
             if k.get("ok"):
                 s["available"] += 1
-            if k.get("ms") is not None:
+            if k.get("ms") is not None and same_vantage:
                 s["latency"].append(k["ms"])
             if s["_last"] is not None and s["_last"] != bool(k.get("ok")):
                 s["flaps"] += 1
             s["_last"] = bool(k.get("ok"))
-            s["series"].append({"t": entry["started_at"], "g": k["g"], "ms": k.get("ms"), "ok": k.get("ok"),
-                                "fails": k["o"].count("F")})
+            s["series"].append({"t": entry["started_at"], "g": k["g"], "ms": k.get("ms") if same_vantage else None,
+                                "ok": k.get("ok"), "fails": k["o"].count("F"), "vantage": entry.get("vantage")})
     for s in out.values():
         s.pop("_last")
         s["availability"] = round(100 * s["available"] / s["runs"], 1) if s["runs"] else None
         s["latency_p50"] = _percentile(s["latency"], 0.5)
         s["latency_p95"] = _percentile(s["latency"], 0.95)
         s.pop("latency")
-    return {"window_days": days, "runs": len(valid), "kgs": out}
+    return {"window_days": days, "runs": len(valid), "latency_vantage": vantage, "kgs": out}
 
 
 def layer_series(entries: list[dict]) -> list[dict]:
