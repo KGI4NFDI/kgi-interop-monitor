@@ -55,6 +55,7 @@ class Census:
     with_counts: bool = False
     result: QueryResult | None = None
     error: str | None = None
+    triples_mode: bool = False
 
     def kind(self, graph: str) -> str:
         if any(p.search(graph) for p in DEFAULT_GRAPH_ALIASES):
@@ -88,9 +89,17 @@ def _q(working: Working, name: str, purpose: str, **kwargs) -> QueryResult:
     return run_query(working.url, queries.load(name), working.form, purpose=purpose, **kw)
 
 
+TRIPLES_MODE = re.compile(r"QuadsOperationInTriplesModeException")
+"""Blazegraph in triples mode rejects any GRAPH pattern with this exception
+(Wikidata, FactGrid, MaRDI, Semantic Kompakkt on 2026-09-23). That is a
+definite answer: the store has no named graphs."""
+
+
 def take_census(working: Working, triples: int | None, heavy: bool, **kwargs) -> Census:
     small = triples is not None and (triples <= SIZE_GATE or heavy)
     r = _q(working, "c_graph_counts" if small else "c_graph_list", "C census", **kwargs)
+    if not r.ok and TRIPLES_MODE.search(r.detail or ""):
+        return Census(graphs=[], with_counts=small, result=r, triples_mode=True)
     if not r.ok:
         return Census(result=r, error=r.detail)
     graphs = []
@@ -131,6 +140,8 @@ def c2(triples: int | None, census: Census) -> ProbeResult:
         if census.result is not None and census.result.verdict == TRANSPORT:
             return ProbeResult("C2", Outcome.UNKNOWN, f"graph census did not answer: {census.error}", evidence=ev)
         return ProbeResult("C2", Outcome.UNKNOWN, f"graph census failed: {census.error}", evidence=ev)
+    if census.triples_mode:
+        return not_applicable("C2", "a triples-mode store: there are no named graphs to mix")
     data = census.data_graphs()
     if len(data) <= 1:
         return not_applicable("C2", "at most one data graph, so there is nothing to mix")
@@ -187,9 +198,13 @@ def c4(working: Working, refs: list[references.Reference], source: references.Re
     if not r.ok:
         return ProbeResult("C4", Outcome.UNKNOWN, f"could not list ontologies: {r.detail}",
                            evidence=r.evidence_ids()), [r], []
-    served = [{"ontology": row.get("ontology", {}).get("value"),
-               "versionIRI": row.get("versionIRI", {}).get("value"),
-               "versionInfo": row.get("versionInfo", {}).get("value")} for row in r.rows]
+    served = []
+    for row in r.rows:
+        entry = {"ontology": row.get("ontology", {}).get("value"),
+                 "versionIRI": row.get("versionIRI", {}).get("value"),
+                 "versionInfo": row.get("versionInfo", {}).get("value")}
+        if entry not in served:  # the same declaration often sits in several graphs
+            served.append(entry)
     if not served:
         return not_applicable("C4", "no owl:Ontology is served"), [r], served
     checks, lagging, unknown = [], [], []
@@ -226,7 +241,12 @@ def c4(working: Working, refs: list[references.Reference], source: references.Re
 
 
 def c5(working: Working, refs: list[references.Reference], source: references.ReleaseSource,
-       **kwargs) -> tuple[ProbeResult, list[QueryResult]]:
+       served_versions: dict[str, str] | None = None, **kwargs) -> tuple[ProbeResult, list[QueryResult]]:
+    """Compare with the release of the version the endpoint serves (found by
+    C4) when there is one, otherwise with the latest release. Comparing an
+    older served version with the latest release would count the version lag
+    twice: once in C4 and again here."""
+    served_versions = served_versions or {}
     sent, comparisons = [], []
     for ref in refs:
         kw = dict(kwargs, read_timeout=min(kwargs.get("read_timeout", C_TIMEOUT), C_TIMEOUT))
@@ -239,10 +259,15 @@ def c5(working: Working, refs: list[references.Reference], source: references.Re
         at_endpoint = r.int_value("n") or 0
         if at_endpoint == 0:
             continue
-        tag, note = source.latest_tag(ref)
+        latest, note = source.latest_tag(ref)
+        tag, why = latest, "latest release"
+        if ref.name in served_versions and latest:
+            tag = ("v" if latest.startswith("v") else "") + served_versions[ref.name]
+            why = f"the release matching the served version {served_versions[ref.name]}"
         released, where = source.release_class_count(ref, tag) if tag else (None, note)
         comparisons.append({"reference": ref.name, "prefix": ref.class_prefix, "endpoint": at_endpoint,
-                            "release": released, "release_tag": tag, "release_source": where})
+                            "release": released, "release_tag": tag, "compared_with": why,
+                            "release_source": where})
     ev = [x for r in sent for x in r.evidence_ids()]
     details = {"comparisons": comparisons}
     errors = [c for c in comparisons if "error" in c]
@@ -281,12 +306,14 @@ def assess(working: Working, triples: int | None, count_evidence: list[str], *, 
     attempts += sent
     results["C4"], sent, served = c4(working, refs, source, **kwargs)
     attempts += sent
-    results["C5"], sent = c5(working, refs, source, **kwargs)
+    served_versions = {c["reference"]: c["served"] for c in results["C4"].details.get("checks", []) if c.get("served")}
+    results["C5"], sent = c5(working, refs, source, served_versions, **kwargs)
     attempts += sent
     for r in results.values():
         if r.outcome not in (Outcome.NA, Outcome.BLOCKED):
             r.measured_on = working.as_dict()
     kpis = {
+        "triples_mode": census.triples_mode,
         "named_graphs": len(census.graphs),
         "top_graphs": [{"graph": g, "triples": n, "kind": census.kind(g)} for g, n in census.graphs[:12]],
         "ontologies_served": served[:20],

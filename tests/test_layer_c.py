@@ -80,3 +80,32 @@ def test_graph_kpis(report):
     kpis = kg(report, "KGR8")["kpis"]
     assert kpis["named_graphs"] == 3
     assert {g["kind"] for g in kpis["top_graphs"]} == {"data"}
+
+
+def test_c5_compares_with_the_release_of_the_served_version():
+    """MatWerk serves MWO 3.0.1 with 44 labelled classes: equal to v3.0.1, far
+    from v3.0.2. That is version lag (C4), not a module (C5)."""
+    from kgi_interop_monitor.probes import layer_c
+    from kgi_interop_monitor.probes.layer_a import Working
+
+    class Counts:
+        def latest_tag(self, ref):
+            return ("v3.0.2", "stub")
+
+        def release_class_count(self, ref, tag):
+            return ({"v3.0.1": 10, "v3.0.2": 94}[tag], f"stub {tag}")
+
+    ref = Reference("NFDIcore", "example/nfdicore", ("https://nfdi.fiz-karlsruhe.de/ontology",),
+                    "https://nfdi.fiz-karlsruhe.de/ontology/NFDI_", "x/{tag}")
+    with FakeEndpoints() as fake:
+        w = Working(fake.url("/messy/sparql"), "get", "registered", None)
+        matched, _ = layer_c.c5(w, [ref], Counts(), {"NFDIcore": "3.0.1"})
+        latest, _ = layer_c.c5(w, [ref], Counts(), {})
+    assert matched.outcome.value == "pass" and matched.details["comparisons"][0]["release_tag"] == "v3.0.1"
+    assert latest.outcome.value == "fail"
+
+
+def test_triples_mode_store_has_no_named_graphs_to_mix():
+    from kgi_interop_monitor.probes.layer_c import Census, c2
+
+    assert c2(100, Census(triples_mode=True)).outcome.value == "n/a"
