@@ -1,0 +1,31 @@
+{
+ "captured": "2026-09-23T00:14:40+00:00",
+ "note": "KGI hub (QLever): malformed query",
+ "request": {
+  "method": "GET",
+  "url": "https://sparql.kgi.services.base4nfdi.de/api/?query=SELECT+%3Fs+WHERE+%7B+%3Fs+%3Fp+%3Fo+",
+  "form": "get",
+  "headers": {
+   "Accept": "application/sparql-results+json"
+  },
+  "body": null
+ },
+ "response": {
+  "status": 400,
+  "headers": {
+   "access-control-allow-headers": "*",
+   "access-control-allow-methods": "GET, POST, OPTIONS",
+   "access-control-allow-origin": "*",
+   "alt-svc": "h3=\":443\"; ma=2592000",
+   "content-length": "372",
+   "content-type": "application/json",
+   "via": "1.1 Caddy",
+   "date": "Wed, 23 Sep 2026 00:14:42 GMT"
+  },
+  "body": "{\n    \"exception\": \"Invalid SPARQL query: Unexpected end of input: missing '}' at '<EOF>'\",\n    \"metadata\": {\n        \"line\": 1,\n        \"positionInLine\": 27,\n        \"startIndex\": 27,\n        \"stopIndex\": 26\n    },\n    \"query\": \"SELECT ?s WHERE { ?s ?p ?o \",\n    \"resultsize\": 0,\n    \"status\": \"ERROR\",\n    \"time\": {\n        \"computeResult\": 1,\n        \"total\": 1\n    }\n}",
+  "body_truncated_in_fixture": false
+ },
+ "error": null,
+ "verdict_at_capture": "http-error",
+ "detail_at_capture": "HTTP 400: Invalid SPARQL query: Unexpected end of input: missing '}' at '<EOF>'"
+}

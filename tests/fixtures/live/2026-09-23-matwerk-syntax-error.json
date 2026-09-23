@@ -1,0 +1,30 @@
+{
+ "captured": "2026-09-23T00:14:41+00:00",
+ "note": "MatWerk Virtuoso: malformed query",
+ "request": {
+  "method": "GET",
+  "url": "https://nfdi.fiz-karlsruhe.de/matwerk/sparql?query=SELECT+%3Fs+WHERE+%7B+%3Fs+%3Fp+%3Fo+",
+  "form": "get",
+  "headers": {
+   "Accept": "application/sparql-results+json"
+  },
+  "body": null
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "access-control-allow-origin": "*",
+   "content-length": "1333",
+   "content-type": "application/sparql-results+json",
+   "date": "Wed, 23 Sep 2026 00:14:43 GMT",
+   "server": "uvicorn",
+   "via": "1.1 Caddy",
+   "strict-transport-security": "max-age=16070400; includeSubDomains"
+  },
+  "body": "{\n  \"error\": \"Virtuoso 37000 Error SP030: SPARQL compiler, line 27: syntax error\\n\\nSPARQL query:\\ndefine sql:big-data-const 0\\nPREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\\nPREFIX owl: <http://www.w3.org/2002/07/owl#>\\nPREFIX schema: <http://schema.org/>\\nPREFIX wd: <http://www.wikidata.org/entity/>\\nPREFIX wds: <http://www.wikidata.org/entity/statement/>\\nPREFIX wikibase: <http://wikiba.se/ontology#>\\nPREFIX wdt: <http://www.wikidata.org/prop/direct/>\\nPREFIX skos: <http://www.w3.org/2004/02/skos/core#>\\nPREFIX dct: <http://purl.org/dc/terms/>\\nPREFIX dc: <http://purl.org/dc/elements/1.1/>\\nPREFIX dbr: <http://dbpedia.org/resource/>\\nPREFIX rico: <https://www.ica.org/standards/RiC/ontology#>\\nPREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>\\nPREFIX sh: <http://www.w3.org/ns/shacl#>\\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\\nPREFIX virtrdfdata: <http://www.openlinksw.com/virtrdf-data-formats#>\\nPREFIX virtrdf: <http://www.openlinksw.com/schemas/virtrdf#>\\nPREFIX fabio: <http://purl.org/spar/fabio/>\\nPREFIX swrl: <http://www.w3.org/2003/11/swrl#>\\nPREFIX dcat: <http://www.w3.org/ns/dcat#>\\nPREFIX shmarql: <https://shmarql.com/>\\nPREFIX factgrid: <https://database.factgrid.de/entity/>\\n\\nSELECT ?s WHERE { ?s ?p ?o \",\n  \"status\": 400\n}",
+  "body_truncated_in_fixture": false
+ },
+ "error": null,
+ "verdict_at_capture": "error-body-2xx",
+ "detail_at_capture": "HTTP 200 with error body: Virtuoso 37000 Error SP030: SPARQL compiler, line 27: syntax error SPARQL query: define sql:big-data-const 0 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX owl: <http://"
+}

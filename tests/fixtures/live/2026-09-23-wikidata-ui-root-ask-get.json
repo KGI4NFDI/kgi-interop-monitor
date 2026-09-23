@@ -1,0 +1,45 @@
+{
+ "captured": "2026-09-23T00:14:41+00:00",
+ "note": "Wikidata as registered (UI root), checklist A3/A7",
+ "request": {
+  "method": "GET",
+  "url": "https://query.wikidata.org?query=ASK+%7B%7D",
+  "form": "get",
+  "headers": {
+   "Accept": "application/sparql-results+json"
+  },
+  "body": null
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "date": "Wed, 23 Sep 2026 00:14:44 GMT",
+   "server": "Apache/2.4.68 (Debian)",
+   "reporting-endpoints": "csp=\"https://www.wikidata.org/w/api.php?action=cspreport&format=json&source=wdqs-gui\"",
+   "content-security-policy": "default-src 'none'; script-src 'report-sample' 'self'; script-src-attr 'report-sample'; style-src 'report-sample' 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https://commons.wikimedia.org https://upload.wikimedia.org https://thumb.wikimedia.org https://maps.wikimedia.org https://tile.openstreetmap.org https://www.wikidata.org; font-src 'self' data:; connect-src 'self' https://query.wikidata.org https://www.wikidata.org https://commons.wikimedia.org https://en.wikipedia.org https://www.mediawiki.org https://maps.wikimedia.org https://meta.wikimedia.org; frame-src 'self' data:; form-action 'self' https://query.wikidata.org; frame-ancestors *; base-uri 'none'; object-src 'none'; worker-src 'self' blob:; manifest-src 'self'; report-uri https://www.wikidata.org/w/api.php?action=cspreport&format=json&source=wdqs-gui; report-to csp",
+   "last-modified": "Tue, 22 Sep 2026 06:41:43 GMT",
+   "accept-ranges": "bytes",
+   "cache-control": "no-cache",
+   "content-type": "text/html",
+   "etag": "W/\"4614-65c0ca8e1d7c0\"",
+   "age": "0",
+   "vary": "Accept-Encoding",
+   "x-cache": "cp3066 miss, cp3066 pass",
+   "x-cache-status": "pass",
+   "strict-transport-security": "max-age=106384710; includeSubDomains; preload",
+   "report-to": "{ \"group\": \"wm_nel\", \"max_age\": 604800, \"endpoints\": [{ \"url\": \"https://intake-logging.wikimedia.org/v1/events?stream=w3c.reportingapi.network_error&schema_uri=/w3c/reportingapi/network_error/1.0.0\" }] }",
+   "nel": "{ \"report_to\": \"wm_nel\", \"max_age\": 604800, \"failure_fraction\": 0.05, \"success_fraction\": 0.0}",
+   "x-client-ip": "95.90.240.114",
+   "set-cookie": "WMF-Uniq=1MuvUs7olcLW0KiMErVpQgPkAAAAAFvdhV2n2bmL5PkUf_TKmZP8XE1opvL6t6L0;Domain=.wikidata.org;Path=/;HttpOnly;secure;SameSite=None;Expires=Thu, 23 Sep 2027 00:00:00 GMT",
+   "transfer-encoding": "chunked",
+   "x-request-id": "534f7efa-db1b-4f1f-97c3-f60a2929c57c",
+   "x-analytics": "",
+   "server-timing": "cache;desc=\"pass\", host;desc=\"cp3066\",co_id;desc=\"1960953131\""
+  },
+  "body": "<!DOCTYPE html><html lang=\"en\" dir=\"ltr\"><head><meta charset=\"utf-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1,user-scalable=yes\"><link rel=\"stylesheet\" href=\"css/style.min.8f74e76c99093293a78f.css\"><link id=\"favicon\" rel=\"shortcut icon\"><script src=\"js/shim.min.fce24adcbaeedabcabf6.js\"></script><style id=\"MJX-CHTML-styles\">/* placeholder for MathJax */</style></head><body><div class=\"wikibase-queryservice container-fluid\"><div class=\"row\"><nav class=\"navbar navbar-default\"><div class=\"navbar-header\"><button type=\"button\" class=\"navbar-toggle collapsed\" data-toggle=\"collapse\" data-target=\"#header-navbar-collapse\" aria-expanded=\"false\"><span class=\"sr-only\">Toggle navigation</span><span class=\"icon-bar\"></span><span class=\"icon-bar\"></span><span class=\"icon-bar\"></span></button><div class=\"navbar-brand\"><a href=\"./\"><img src=\"data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=\"><span></span></a></div></div><div class=\"collapse navbar-collapse in\" id=\"header-navbar-collapse\"><ul class=\"nav navbar-nav navbar-left\" id=\"left-navbar\"><li><button type=\"button\" class=\"btn navbar-btn btn-default\" id=\"open-example\" data-toggle=\"modal\" data-target=\"#QueryExamples\"><span class=\"glyphicon glyphicon-folder-open\"></span> <span data-i18n=\"wdqs-app-button-examples\" id=\"examples-label\"></span></button></li><li class=\"dropdown\"><div class=\"btn-group navbar-btn\"><a href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:SPARQL_query_service/Wikidata_Query_Help\" target=\"_blank\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-question-sign\" aria-hidden=\"true\"></span> <span data-i18n=\"wdqs-app-button-help\" id=\"help-label\"></span> </a><button data-toggle=\"dropdown\" class=\"btn btn-default dropdown-toggle\" id=\"help-toggle\"><span class=\"caret\"></span></button><ul class=\"dropdown-menu\"><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:SPARQL_query_service/Wikidata_Query_Help\" data-i18n=\"wdqs-app-help-portal\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.mediawiki.org/wiki/Special:MyLanguage/Wikidata_Query_Service/User_Manual\" data-i18n=\"wdqs-app-help-manual\"></a></li><li><a target=\"_blank\" rel=\"noopener\" id=\"examples-link\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:SPARQL_query_service/queries/examples\" data-i18n=\"wdqs-app-help-examples\"></a></li><li role=\"separator\" class=\"divider\"></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.w3.org/TR/sparql11-query/\">SPARQL</a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.mediawiki.org/wiki/Special:MyLanguage/Wikibase/Indexing/RDF_Dump_Format\" data-i18n=\"wdqs-app-help-datamodel\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.mediawiki.org/wiki/Special:MyLanguage/Wikibase/Indexing/RDF_Dump_Format#Full_list_of_prefixes\" data-i18n=\"wdqs-app-help-prefixes\"></a></li><li role=\"separator\" class=\"divider\"></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Request_a_query\" data-i18n=\"wdqs-app-help-request-query\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.mediawiki.org/w/index.php?title=Talk:Wikidata_Query_Service&action=edit&section=new\" data-i18n=\"wdqs-app-help-feedback\"></a></li><li><a target=\"_blank\" rel=\"noopener\" id=\"copyright-link\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:SPARQL_query_service/Copyright\" data-i18n=\"wdqs-app-help-copy\"></a></li></ul></div></li><li class=\"dropdown\"><div class=\"btn-group navbar-btn\"><a href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools\" target=\"_blank\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> <span data-i18n=\"wdqs-app-button-more-tools\" id=\"tools-label\"></span> </a><button data-toggle=\"dropdown\" class=\"btn btn-default dropdown-toggle\" id=\"tools-toggle\"><span class=\"caret\"></span></button><ul class=\"dropdown-menu\"><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/Edit_items\" data-i18n=\"wdqs-app-tools-edit-items\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/Query_data\" data-i18n=\"wdqs-app-tools-query-data\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/Enhance_user_interface\" data-i18n=\"wdqs-app-tools-enhance-ui\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/Visualize_data\" data-i18n=\"wdqs-app-tools-visualize-data\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:List_of_properties\" data-i18n=\"wdqs-app-tools-list-properties\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/Lexicographical_data\" data-i18n=\"wdqs-app-tools-lexicographical-data\"></a></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://www.wikidata.org/wiki/Special:MyLanguage/Wikidata:Tools/For_programmers\" data-i18n=\"wdqs-app-tools-for-programmers\"></a></li><li role=\"separator\" class=\"divider\"></li><li><a target=\"_blank\" rel=\"noopener\" href=\"https://tools.wmflabs.org/hay/directory/#/search/wikidata\">Wikimedia Toolforge</a></li></ul></div></li><li class=\"dropdown\"><div class=\"btn-group navbar-btn\"><a target=\"_blank\" href=\"https://query.wikidata.org/querybuilder/\" class=\"btn btn-default dropdown-toggle query-builder-toggle\" id=\"query-builder-toggle\"><span data-i18n=\"wdqs-app-query-builder-name\" id=\"query-builder-label\"></span></a></div></li></ul><ul class=\"nav navbar-nav navbar-right\" id=\"right-navbar\"><li><a href=\"#\" class=\"uls-trigger\" id=\"language-toggle\" data-toggle=\"tooltip\"></a></li></ul></div></nav><div id=\"query-box\"><form id=\"query-form\" action=\"#\"><div class=\"query-main\"><div class=\"toolb",
+  "body_truncated_in_fixture": true
+ },
+ "error": null,
+ "verdict_at_capture": "not-sparql",
+ "detail_at_capture": "HTTP 200 but an HTML page, not a SPARQL results document"
+}

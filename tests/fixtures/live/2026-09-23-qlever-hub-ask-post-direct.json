@@ -1,0 +1,32 @@
+{
+ "captured": "2026-09-23T00:14:40+00:00",
+ "note": "KGI hub (QLever): ASK via direct POST",
+ "request": {
+  "method": "POST",
+  "url": "https://sparql.kgi.services.base4nfdi.de/api/",
+  "form": "post-direct",
+  "headers": {
+   "Accept": "application/sparql-results+json",
+   "Content-Type": "application/sparql-query"
+  },
+  "body": "ASK {}"
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "access-control-allow-headers": "*",
+   "access-control-allow-methods": "GET, POST, OPTIONS",
+   "access-control-allow-origin": "*",
+   "alt-svc": "h3=\":443\"; ma=2592000",
+   "content-type": "application/sparql-results+json",
+   "via": "1.1 Caddy",
+   "date": "Wed, 23 Sep 2026 00:14:43 GMT",
+   "transfer-encoding": "chunked"
+  },
+  "body": "{\"boolean\":true,\"head\":{}}",
+  "body_truncated_in_fixture": false
+ },
+ "error": null,
+ "verdict_at_capture": "ok",
+ "detail_at_capture": ""
+}
