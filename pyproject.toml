@@ -33,3 +33,7 @@ markers = [
   "live: talks to real endpoints on the internet (deselected by default)",
 ]
 addopts = "-m 'not live'"
+filterwarnings = [
+  # rdflib 7.x deprecates Dataset.default_context and uses it internally
+  "ignore::DeprecationWarning:rdflib.*",
+]
