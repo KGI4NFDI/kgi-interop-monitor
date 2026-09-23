@@ -108,6 +108,8 @@ def registry_data(base: str) -> Graph:
     record("KGR11", "Nothing KG", None)
     record("KGR12", "Healthy KG", f"{base}/healthy/sparql/", landing="https://healthy.example")
     record("KGR13", "Moved KG", f"{base}/moved/sparql")
+    record("KGR14", "Packed KG", f"{base}/ui/; {base}/empty/sparql")
+    record("KGR15", "Fragment KG", f"{base}/virtuoso/sparql#/dataset/kg/query")
     return g
 
 
@@ -156,7 +158,8 @@ class FakeEndpoints:
                 pass
 
             def version_string(self):
-                return "Virtuoso/07.20.3237 (Linux) x86_64" if self.path.startswith("/virtuoso") else "FakeSPARQL/1.0"
+                path = getattr(self, "path", "") or ""
+                return "Virtuoso/07.20.3237 (Linux) x86_64" if path.startswith("/virtuoso") else "FakeSPARQL/1.0"
 
             def reply(self, status, body, content_type="text/plain; charset=utf-8", headers=None):
                 data = body.encode("utf-8") if isinstance(body, str) else body

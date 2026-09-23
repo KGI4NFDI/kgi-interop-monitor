@@ -75,4 +75,4 @@ def test_hub_routes_bound_service_and_rejects_variable_service(fake):
 def test_registry_describes_the_endpoints(fake):
     r = run_query(fake.url("/registry/sparql"),
                   "PREFIX dcat: <http://www.w3.org/ns/dcat#> SELECT (COUNT(*) AS ?n) WHERE { ?d a dcat:Dataset }", "get")
-    assert r.int_value("n") == 13
+    assert r.int_value("n") == 15

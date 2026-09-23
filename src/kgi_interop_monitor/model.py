@@ -161,7 +161,9 @@ def grade(results: dict[str, ProbeResult], has_working_url: bool, dump_only: boo
         return "dump" if dump_only else "none"
 
     def clears(layer: str) -> bool:
-        return all(results[p].outcome in CLEARS for p in GATES[layer] if p in results)
+        # A gate that was never measured is not cleared: a run limited to
+        # layer A must not report grade C.
+        return all(p in results and results[p].outcome in CLEARS for p in GATES[layer])
 
     level = "A" if (assume_registry_fixed or clears("A")) else "A*"
     if level == "A*":
