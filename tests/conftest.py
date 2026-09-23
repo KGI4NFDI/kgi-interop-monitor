@@ -5,8 +5,6 @@ import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import pytest
-
 from kgi_interop_monitor import transport
 
 
@@ -31,7 +29,8 @@ def free_port() -> int:
         return sock.getsockname()[1]
 
 
-@pytest.fixture(autouse=True)
-def no_pacing(monkeypatch):
-    """Tests talk to localhost only; pacing would just slow them down."""
-    monkeypatch.setattr(transport.PACER, "min_interval", 0.0)
+def pytest_configure(config):
+    """Tests talk to localhost only; pacing would just slow them down. Set once
+    for the session, because module-scoped fixtures run before any
+    function-scoped fixture could switch it off."""
+    transport.PACER.min_interval = 0.0
