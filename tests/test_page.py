@@ -12,8 +12,9 @@ def evil_report():
     r = report("2026-09-23T0017Z", "2026-09-23T00:17:00+00:00")
     # An HTML error page as evidence, the shape that broke the first build:
     # "<!--" then "<script" inside a script element swallows what follows.
+    # The trailing U+FFFD is what a non-UTF-8 response decodes to.
     r["kgs"][0]["exchanges"] = [{"id": "x1", "response": {
-        "body_excerpt": "<!DOCTYPE HTML> <!-- Copyright --> <script>var a = 1;</script> </body>"}}]
+        "body_excerpt": "<!DOCTYPE HTML> <!-- Copyright --> <script>var a = 1;</script> </body> �"}}]
     r["kgs"][0]["title"] = "KG with </script> in its name & more"
     return r
 
@@ -22,8 +23,9 @@ def test_embedded_data_cannot_break_out_of_its_script_element(tmp_path):
     history.record(evil_report(), tmp_path)
     html = page.render(page.page_data(tmp_path))
     data_block = re.search(r'<script type="application/json" id="kgi-data">(.*?)</script>', html, re.S).group(1)
-    assert "<" not in data_block and ">" not in data_block
+    assert "<" not in data_block and ">" not in data_block and "�" not in data_block
     data = json.loads(data_block)
+    assert data["report"]["kgs"][0]["exchanges"][0]["response"]["body_excerpt"].endswith("�")
     assert data["report"]["kgs"][0]["title"] == "KG with </script> in its name & more"
     assert "<!-- Copyright -->" in data["report"]["kgs"][0]["exchanges"][0]["response"]["body_excerpt"]
     # the page script follows the data block intact
