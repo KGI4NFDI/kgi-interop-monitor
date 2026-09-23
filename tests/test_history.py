@@ -62,3 +62,14 @@ def test_layer_series_counts_failures_per_layer():
     rows = history.layer_series([history.compact(broken), history.compact(fixed)])
     assert rows[0]["fails"] == {"A": 1, "B": 1, "C": 0}
     assert rows[1]["fails"] == {"A": 0, "B": 1, "C": 0}
+
+
+def test_latency_statistics_stay_within_one_vantage_point():
+    here = history.compact(report("r1", "2026-09-23T01:00:00+00:00"))
+    there = history.compact(report("r2", "2026-09-23T02:00:00+00:00"))
+    there["vantage"] = "github-actions/linux"
+    there["kgs"]["KGR1"]["ms"] = 400.0
+    k = history.kpis([here, there], now=datetime(2026, 9, 23, 12, tzinfo=timezone.utc), vantage="github-actions/linux")
+    s = k["kgs"]["KGR1"]
+    assert s["latency_p50"] == 400.0 and s["runs"] == 2 and s["availability"] == 100.0
+    assert [p["ms"] for p in s["series"]] == [None, 400.0]

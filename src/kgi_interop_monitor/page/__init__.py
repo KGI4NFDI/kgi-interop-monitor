@@ -36,7 +36,7 @@ def page_data(results: Path, window_days: int = 7) -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "monitor_version": __version__,
         "report": report,
-        "kpis": history.kpis(entries, days=window_days),
+        "kpis": history.kpis(entries, days=window_days, vantage=report["monitor"]["vantage"]),
         "layers": history.layer_series(entries),
         "runs_total": len(entries),
         "specs": _specs(),
