@@ -1,0 +1,8 @@
+# b_service_bound: can the federation hub reach this endpoint? (B4)
+#
+# Sent to the KGI hub, not to the endpoint. The hub forwards the inner query
+# to %%ENDPOINT%% with its own client, so this measures the route the
+# catalogue promises: SPARQL 1.1 Federated Query §3.
+SELECT * WHERE {
+  SERVICE <%%ENDPOINT%%> { SELECT * WHERE { ?s ?p ?o } LIMIT 1 }
+}

@@ -1,0 +1,7 @@
+# b_malformed: a query with a syntax error on purpose (B2).
+#
+# SPARQL 1.1 Protocol §2.1.7: a query that is not a legal sequence of
+# characters in the SPARQL grammar gets HTTP 400. A 200 here means errors are
+# reported as success, which a client can only catch by parsing every body.
+# The error text that comes back is also the most reliable engine signature.
+SELECT ?s WHERE { ?s ?p ?o
