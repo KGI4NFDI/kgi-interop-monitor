@@ -14,9 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from . import __version__, queries, registry
+from . import __version__, queries, references, registry
 from .model import SPECS, Outcome, ProbeResult, grade, not_applicable
-from .probes import layer_a, layer_b
+from .probes import layer_a, layer_b, layer_c
 from .registry import EndpointValue, RegistryRecord
 from .sparql import QueryResult, run_query
 from .transport import Exchange, exchange
@@ -36,6 +36,8 @@ class RunConfig:
     heavy: bool = False
     connect_timeout: float = 10.0
     read_timeout: float = 30.0
+    references: list | None = None
+    release_source: object | None = None
 
     def request_kwargs(self) -> dict:
         return {"connect_timeout": self.connect_timeout, "read_timeout": self.read_timeout}
@@ -101,6 +103,23 @@ def assess_record(record: RegistryRecord, config: RunConfig) -> KgReport:
         report.queries.extend(b.attempts)
         report.extra_exchanges.extend(b.exchanges)
         report.kpis.update(b.kpis)
+    if "C" in config.layers:
+        if a.working:
+            counted = [r for r in report.queries if r.exchange.purpose == "B3 count(*)"]
+            triples = report.kpis.get("triples")
+            if not counted:  # layer B was not run: count here
+                counted = [run_query(a.working.url, queries.load("b_count_all"), a.working.form,
+                                     purpose="B3 count(*)", **kwargs)]
+                report.queries.extend(counted)
+                triples = counted[0].int_value("n") if counted[0].ok else None
+                report.kpis["triples"] = triples
+            c = layer_c.assess(a.working, triples, [x for r in counted for x in r.evidence_ids()],
+                               heavy=config.heavy, refs=config.references, source=config.release_source, **kwargs)
+            report.kpis.update(c.kpis)
+        else:
+            c = layer_c.not_measurable(a.dump_only)
+        report.add(*c.results.values())
+        report.queries.extend(c.attempts)
     report.seconds = time.monotonic() - started
     return report
 
@@ -167,6 +186,9 @@ def run(config: RunConfig) -> dict:
         return _finish(report, clock)
     report["registry_findings"] = [f.as_dict() for f in registry.findings(snapshot)]
 
+    if "C" in config.layers:
+        config.references = references.load() if config.references is None else config.references
+        config.release_source = config.release_source or references.ReleaseSource()
     records = [r for r in snapshot.records if not config.only or r.id in config.only]
     targets = records + ([hub_record(config.hub_endpoint)] if not config.only or HUB_ID in config.only else [])
     with ThreadPoolExecutor(max_workers=config.max_workers) as pool:

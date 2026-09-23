@@ -1,0 +1,12 @@
+# c_labelled_classes: labelled classes in one namespace (C5).
+#
+# Compared with the same count in the released ontology file. More classes
+# than the release means extra terms were loaded (an extension module or an
+# old version); fewer means only a module was loaded.
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT (COUNT(DISTINCT ?c) AS ?n) WHERE {
+  ?c a owl:Class ;
+     rdfs:label ?label .
+  FILTER(STRSTARTS(STR(?c), "%%NAMESPACE%%"))
+}

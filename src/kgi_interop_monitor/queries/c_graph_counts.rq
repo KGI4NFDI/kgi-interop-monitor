@@ -1,0 +1,6 @@
+# c_graph_counts: triples per named graph (C1, C2).
+#
+# Only sent below the politeness size gate (ADR 0004): on large stores the
+# GROUP BY needs a full scan. Above the gate c_graph_list is used instead.
+SELECT ?g (COUNT(*) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } }
+GROUP BY ?g ORDER BY DESC(?n) LIMIT 200
