@@ -82,7 +82,13 @@ def identify(exchanges: list[Exchange]) -> dict:
                 m = None
             if m:
                 version = m.groupdict().get("version") if m.groupdict() else None
-                where = f"Server: {server}" if sig.source == "header" else x.id
+                matched = " ".join(m.group(0).split())[:80]
+                if sig.source == "header":
+                    where = f"Server header: {server}"
+                elif sig.source == "body":
+                    where = f"error text \u201c{matched}\u201d in response {x.id}"
+                else:
+                    where = f"URL path \u201c{matched}\u201d"
                 hits.append((RANK[sig.source], sig, version, where))
     if not hits:
         servers = sorted({x.response_headers.get("server") for x in exchanges if x.response_headers.get("server")})
@@ -94,6 +100,7 @@ def identify(exchanges: list[Exchange]) -> dict:
         "engine": sig.engine,
         "version": version,
         "source": sig.source,
-        "evidence": f"{sig.evidence} ({where})",
+        "evidence": where,
+        "signature": sig.evidence,
         "also_matched": [e for e in engines if e != sig.engine],
     }
