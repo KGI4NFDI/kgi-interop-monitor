@@ -80,13 +80,16 @@ def _judge(test: ProtocolTest, x: Exchange) -> tuple[bool, str]:
         return False, f"expected 2xx or 3xx, got HTTP {status}"
     if 300 <= status < 400:
         return True, f"HTTP {status} (redirect, accepted by the manifest)"
+    no_accept = " (the manifest sends no Accept header, so this is the server's default format)"
     if test.expect == "tabular":
-        return (media in TABULAR), f"HTTP {status}, {media or 'no content type'}"
+        ok = media in TABULAR
+        return ok, f"HTTP {status}, {media or 'no content type'}" + ("" if ok else no_accept)
     if test.expect == "rdf":
-        return (media in RDF), f"HTTP {status}, {media or 'no content type'}"
+        ok = media in RDF
+        return ok, f"HTTP {status}, {media or 'no content type'}" + ("" if ok else no_accept)
     if test.expect in ("boolean", "boolean-true"):
         if media not in BOOLEAN:
-            return False, f"HTTP {status}, {media or 'no content type'} is not a boolean results format"
+            return False, f"HTTP {status}, {media or 'no content type'} is not a boolean results format" + no_accept
         holder = QueryResult(url=x.url, form="", query="", hops=[x])
         parsed = _parse_json(x.text(), holder) if media.endswith("json") else _parse_xml(x.text(), holder)
         if holder.boolean is None:

@@ -83,3 +83,27 @@ def test_size_gate(monkeypatch):
         heavy, _, _ = layer_b.b3(fake.url("/healthy/sparql"), "get", heavy=True)
     assert result.outcome.value == "unknown" and "politeness" in result.summary and n == 40
     assert heavy.outcome.value == "pass"
+
+
+def test_slow_on_both_shapes_is_a_warning_not_shape_sensitivity(monkeypatch):
+    monkeypatch.setattr(layer_b, "SLOW_COUNT_MS", 0)
+    monkeypatch.setattr(layer_b, "B3_TIMEOUT", 0.5)
+    with FakeEndpoints(slow_seconds=1.0) as fake:
+        result, _, _ = layer_b.b3(fake.url("/slow/sparql"), "get", heavy=False)
+    assert result.outcome.value == "warn" and "slow on both shapes" in result.summary
+
+
+def test_shape_sensitivity_is_a_failure(monkeypatch):
+    monkeypatch.setattr(layer_b, "B3_TIMEOUT", 0.5)
+    with FakeEndpoints(slow_seconds=1.0) as fake:
+        # count(*) is answered fast by the healthy store, count(distinct) by the slow one
+        real = layer_b.run_query
+
+        def routed(url, query, form, **kw):
+            if "DISTINCT" in query:
+                url = url.replace("/healthy/", "/slow/")
+            return real(url, query, form, **kw)
+
+        monkeypatch.setattr(layer_b, "run_query", routed)
+        result, _, _ = layer_b.b3(fake.url("/healthy/sparql"), "get", heavy=False)
+    assert result.outcome.value == "fail" and "COUNT(DISTINCT ?s) on the same pattern fails" in result.summary

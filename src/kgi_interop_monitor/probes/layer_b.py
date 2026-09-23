@@ -26,6 +26,8 @@ from .layer_a import Working
 SIZE_GATE = 50_000_000
 """Triples above which scan-prone probes need --heavy (ADR 0004, review)."""
 B3_TIMEOUT = 20.0
+SLOW_COUNT_MS = 5000
+"""A COUNT(*) slower than this is not answered from index statistics."""
 LATENCY_SAMPLES = 3
 
 
@@ -140,6 +142,12 @@ def b3(url: str, form: str, heavy: bool, **kwargs) -> tuple[ProbeResult, list[Qu
     details = {"triples": n, "count_ms": round(t1, 1), "count_distinct_ms": round(t2, 1) if t2 else None}
     ev = count.evidence_ids() + distinct.evidence_ids()
     if not distinct.ok:
+        if t1 >= SLOW_COUNT_MS:
+            # COUNT(*) is already slow, so this is an overall-speed problem,
+            # not the shape sensitivity the checklist row is about.
+            return ProbeResult("B3", Outcome.WARN,
+                               f"slow on both shapes: COUNT(*) takes {t1 / 1000:.1f} s and COUNT(DISTINCT ?s) fails "
+                               f"({distinct.detail})", details=details, evidence=ev), [count, distinct], n
         return ProbeResult("B3", Outcome.FAIL,
                            f"COUNT(*) answers in {t1:.0f} ms, COUNT(DISTINCT ?s) on the same pattern fails: {distinct.detail}",
                            details=details, evidence=ev), [count, distinct], n
@@ -176,8 +184,13 @@ def b5(matrix: list[QueryResult]) -> ProbeResult:
     refused = [r for r in matrix if r.verdict == REFUSED]
     if refused:
         statuses = sorted({r.status for r in refused})
+        answered = [r.form for r in matrix if r.ok]
+        scope = (f"only in {', '.join(r.form for r in refused)}, while {', '.join(answered)} answer: "
+                 "a block on one request form, which also breaks clients that use it (see B1, B4)"
+                 if answered else "in every request form")
         return ProbeResult("B5", Outcome.FAIL,
-                           f"trivial queries refused in {', '.join(r.form for r in refused)} (HTTP {', '.join(map(str, statuses))})",
+                           f"trivial queries refused with HTTP {', '.join(map(str, statuses))} {scope}",
+                           details={"refused": [r.form for r in refused], "answered": answered},
                            evidence=_ev(refused))
     return ProbeResult("B5", Outcome.PASS, "trivial queries are answered, not refused")
 

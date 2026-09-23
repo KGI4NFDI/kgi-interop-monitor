@@ -17,10 +17,14 @@ SYMBOL = {"pass": "+", "warn": "!", "fail": "X", "unknown": "?", "blocked": "#",
 
 def table(report: dict) -> str:
     probes = [p for p in SPECS if any(p in kg["results"] for kg in report["kgs"])]
-    lines = [f"{'id':7} {'title':34} {'grade':6} {'fixed':6} " + " ".join(f"{p:2}" for p in probes)]
+    lines = [f"{'id':7} {'title':34} {'grade':6} {'fixed':6} {'ms':>6} {'P':>5} " + " ".join(f"{p:2}" for p in probes)]
     for kg in sorted(report["kgs"], key=lambda k: (k["title"].lower(), k["id"])):
         cells = " ".join(f"{SYMBOL.get(kg['results'].get(p, {}).get('outcome', ''), ' '):2}" for p in probes)
-        lines.append(f"{kg['id']:7} {kg['title'][:34]:34} {kg['grade']:6} {kg['grade_if_registry_fixed']:6} {cells}")
+        kpis = kg.get("kpis", {})
+        ms = f"{kpis['latency_ms']:.0f}" if kpis.get("latency_ms") else "-"
+        proto = f"{kpis['protocol']['passed']}/{kpis['protocol']['total']}" if kpis.get("protocol") else "-"
+        lines.append(f"{kg['id']:7} {kg['title'][:34]:34} {kg['grade']:6} {kg['grade_if_registry_fixed']:6} "
+                     f"{ms:>6} {proto:>5} {cells}")
     lines.append("")
     lines.append("+ pass  ! warn  X fail  ? unknown  # blocked  . n/a")
     return "\n".join(lines)
@@ -58,6 +62,8 @@ def cmd_run(args: argparse.Namespace) -> int:
           f"after repair {s['working_after_repair']}; grades {s['grades']}; {report['seconds']} s")
     for finding in report["registry_findings"]:
         print(f"registry {finding['id']} [{finding['outcome']}] {finding['summary']}")
+    for finding in report.get("hub_findings", []):
+        print(f"hub      {finding['id']} [{finding['outcome']}] {finding['summary']}")
     print(f"wrote {path}")
     return 0
 
