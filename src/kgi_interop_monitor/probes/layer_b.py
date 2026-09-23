@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 
 from .. import fingerprint, protocol, queries
 from ..model import Outcome, ProbeResult, blocked, not_applicable
-from ..sparql import ERROR_BODY_2XX, FORMS, MEDIA, OK, REFUSED, TRANSPORT, QueryResult, run_query
+from ..sparql import ERROR_BODY_2XX, FORMS, MEDIA, NOT_SPARQL, REFUSED, TRANSPORT, QueryResult, run_query
 from ..transport import Exchange
 from .layer_a import Working
 
@@ -67,13 +67,23 @@ def not_measurable(a_attempts: list[QueryResult], dump_only: bool) -> BLayer:
                                     details={"forms": sorted({r.form for r in refused})}, evidence=_ev(refused))
     else:
         results["B5"] = blocked("B5", "no working SPARQL URL (see layer A)")
-    error = next((r for r in a_attempts if not r.ok), None)
-    error_class = None
-    if error is not None:
-        error_class = error.exchange.error_class or (f"http-{error.status}" if error.status else error.verdict)
-        if error.verdict in ("not-sparql",):
-            error_class = "not-sparql"
-    return BLayer(results, kpis={"available": False, "error_class": error_class})
+    return BLayer(results, kpis={"available": False, "error_class": error_class(a_attempts)})
+
+
+def error_class(attempts: list[QueryResult]) -> str | None:
+    """Why the registered URL gave no results, as one short label for the
+    page: not-sparql, a transport class such as dns or tls-expired, or
+    http-<status>."""
+    first = next((r for r in attempts if not r.ok), None)
+    if first is None:
+        return None
+    if first.verdict == NOT_SPARQL:
+        return "not-sparql"
+    if first.exchange.error_class:
+        return first.exchange.error_class
+    if first.status:
+        return f"http-{first.status}"
+    return first.verdict
 
 
 def b1(url: str, **kwargs) -> tuple[ProbeResult, list[QueryResult]]:

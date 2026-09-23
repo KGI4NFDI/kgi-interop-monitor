@@ -20,7 +20,7 @@ from .. import queries
 from ..model import Outcome, ProbeResult, not_applicable
 from ..normalize import ParsedValue, candidates, canonical, parse_value, title_key
 from ..registry import RegistryRecord
-from ..sparql import FORMS, HTTP_ERROR, NOT_SPARQL, ERROR_BODY_2XX, OK, REDIRECT_LOOP, REFUSED, TRANSPORT, QueryResult, run_query
+from ..sparql import FORMS, HTTP_ERROR, NOT_SPARQL, ERROR_BODY_2XX, REDIRECT_LOOP, REFUSED, TRANSPORT, QueryResult, run_query
 
 DEAD_STATUSES = frozenset({404, 410}) | frozenset(range(500, 600))
 HOST_LEVEL_ERRORS = frozenset({"dns", "refused", "reset", "network", "timeout-connect",
