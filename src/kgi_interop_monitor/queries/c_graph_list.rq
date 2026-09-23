@@ -1,0 +1,3 @@
+# c_graph_list: names of the named graphs, without counts (C1, C2 on large
+# stores). Bounded by LIMIT and by the read timeout.
+SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } } LIMIT 200
