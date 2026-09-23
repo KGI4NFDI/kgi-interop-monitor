@@ -15,7 +15,7 @@ def snapshot():
 
 def test_reads_every_dataset(snapshot):
     snap, _ = snapshot
-    assert snap.ok and len(snap.records) == 13
+    assert snap.ok and len(snap.records) == 15
 
 
 def test_endpoint_values_keep_their_raw_form_and_term_type(snapshot):
@@ -40,7 +40,7 @@ def test_literal_endpoint_values_are_one_registry_finding(snapshot):
     snap, _ = snapshot
     found = {f.id: f for f in registry.findings(snap)}
     assert found["R1"].outcome == "fail"
-    assert found["R1"].details["literal"] == 11
+    assert found["R1"].details["literal"] == 13
     assert "rdfs:Resource" in found["R1"].summary
 
 

@@ -31,7 +31,7 @@ def outcomes(report, rid):
 
 def test_run_is_ok_and_covers_every_record(report):
     assert report["status"] == "ok"
-    assert len(report["kgs"]) == 13
+    assert len(report["kgs"]) == 15
 
 
 def test_healthy_clears_layer_a(report):
@@ -85,7 +85,8 @@ def test_duplicates_are_found_by_slash_title_landing_page_and_working_url(report
     others = kg(report, "KGR1")["results"]["A6"]["details"]["others"]
     assert set(others["KGR12"]) >= {"same registered endpoint", "same title", "same landing page"}
     assert "same working endpoint" in others["KGR13"]
-    assert outcomes(report, "KGR7")["A6"] == "pass"
+    assert outcomes(report, "KGR8")["A6"] == "pass"
+    assert "same registered endpoint" in kg(report, "KGR7")["results"]["A6"]["details"]["others"]["KGR14"]
 
 
 def test_every_network_result_carries_evidence(report):
@@ -104,3 +105,18 @@ def test_unreachable_registry_is_reported_as_such():
         out = run(RunConfig(control_url=fake.url("/healthy/sparql?query=ASK%7B%7D"),
                             registry_endpoint=fake.url("/gone/sparql"), layers="A"))
     assert out["status"] == "registry-unavailable"
+
+
+def test_packed_value_tries_every_part(report):
+    k = kg(report, "KGR14")
+    a7 = k["results"]["A7"]
+    assert a7["outcome"] == "fail" and k["working"]["via"] == "split"
+    assert k["working"]["url"].endswith("/empty/sparql")
+    assert [part["state"] for part in a7["details"]["parts"]] == ["not-sparql", "sparql"]
+    assert k["results"]["A5"]["outcome"] == "warn"
+
+
+def test_ui_fragment_is_a_warning_and_is_dropped_from_the_working_url(report):
+    k = kg(report, "KGR15")
+    assert k["results"]["A7"]["outcome"] == "warn"
+    assert "#" not in k["working"]["url"] and k["working"]["url"].endswith("/virtuoso/sparql")

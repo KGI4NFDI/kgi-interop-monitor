@@ -13,6 +13,7 @@ under A7 and the higher layers record it (ADR 0002).
 
 from __future__ import annotations
 
+import urllib.parse
 from dataclasses import dataclass, field
 
 from .. import queries
@@ -200,10 +201,13 @@ def assess(record: RegistryRecord, **kwargs) -> ALayer:
             results[pid] = not_applicable(pid, reason)
         return ALayer(results, None, attempts, dump_only)
 
-    # A3 / A4 on what is registered. A packed value is tried part by part.
+    # A3 / A4 on what is registered. A packed value is tried part by part,
+    # all parts, because the first one that answers is not necessarily the
+    # one that holds the data.
     working: Working | None = None
     states: list[str] = []
     per_url: list[list[QueryResult]] = []
+    packed = len(urls) > 1 or any(p.is_packed for p in parsed)
     for url in urls:
         matrix = ask_matrix(url, "A3/A4", **kwargs)
         attempts.extend(matrix)
@@ -211,17 +215,24 @@ def assess(record: RegistryRecord, **kwargs) -> ALayer:
         states.append(matrix_state(matrix))
         best = pick_working(matrix)
         if best and working is None:
-            packed = len(urls) > 1 or any(p.is_packed for p in parsed)
             via = "split" if packed else ("redirect" if best.redirected else "registered")
-            working = Working(best.final_url if best.redirected else url, best.form, via, best)
+            target = best.final_url if best.redirected else urllib.parse.urldefrag(url)[0]
+            working = Working(target, best.form, via, best)
+        if not packed:
             break
     order = ("sparql", "not-sparql", "refused", "dead")
     best_index = min(range(len(states)), key=lambda i: order.index(states[i]))
     a3, a4 = _a3_a4(states[best_index], per_url[best_index])
     results["A3"], results["A4"] = a3, a4
+    fragment = urllib.parse.urldefrag(urls[0])[1] if not packed else ""
 
     # A7: does the value work as stored?
-    if working and working.via == "registered":
+    if working and working.via == "registered" and fragment:
+        results["A7"] = ProbeResult(
+            "A7", Outcome.WARN,
+            f"works only because HTTP drops the fragment '#{fragment}'; the value carries a UI route, "
+            f"register {working.url} instead", details={"proposal": working.url})
+    elif working and working.via == "registered":
         results["A7"] = ProbeResult("A7", Outcome.PASS, "works as registered")
     elif working and working.via == "redirect":
         results["A7"] = ProbeResult(
@@ -230,8 +241,12 @@ def assess(record: RegistryRecord, **kwargs) -> ALayer:
             details={"proposal": working.url, "hops": [h.url for h in working.ask.hops]},
             evidence=working.ask.evidence_ids())
     elif working and working.via == "split":
-        results["A7"] = ProbeResult("A7", Outcome.FAIL, f"works only after splitting the value; {working.url} answers",
-                                    details={"proposal": working.url}, evidence=working.ask.evidence_ids())
+        parts = [{"url": u, "state": st} for u, st in zip(urls, states)]
+        results["A7"] = ProbeResult("A7", Outcome.FAIL,
+                                    f"works only after splitting the value; {working.url} answers "
+                                    f"({sum(st == 'sparql' for st in states)} of {len(urls)} parts are SPARQL)",
+                                    details={"proposal": working.url, "parts": parts},
+                                    evidence=working.ask.evidence_ids())
     else:
         host_down = all(r.verdict == TRANSPORT and r.exchange.error_class in HOST_LEVEL_ERRORS
                         for matrix in per_url for r in matrix)
