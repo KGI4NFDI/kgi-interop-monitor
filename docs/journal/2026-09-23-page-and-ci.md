@@ -43,3 +43,18 @@
    the standalone page (the artifact host adds the same rule).
 3. **The browser pane cannot open local files.** The page is served over
    `http.server` on localhost for the one look it gets before publishing.
+4. **The page scrolled sideways** below about 1,250 px: the matrix's
+   min-content width blew out the wrapper's auto grid column. Found with the
+   look before publishing; the column is `minmax(0, 1fr)` now.
+5. **The drawer's scroll area was cut off** by 62 px: `height: 100%` plus
+   padding without `border-box`.
+6. **The first publish was refused**: the file held 60 raw U+FFFD characters.
+   They were data, not damage (evidence of responses that were not UTF-8, such
+   as the UTF-16 protocol test), and are now written as `�` escapes.
+
+## Where the page is
+
+The status page built from the first three runs is published as a private
+claude.ai page (https://claude.ai/artifact/5WQvwk84uk4b4wZXbv2y1S). Every
+scheduled run also rebuilds `site/index.html` on the `results` branch and
+keeps it as a workflow artifact for 30 days.
