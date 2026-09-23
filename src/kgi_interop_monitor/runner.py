@@ -14,14 +14,15 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from . import __version__, registry
-from .model import SPECS, Outcome, ProbeResult, grade
-from .probes import layer_a
-from .registry import RegistryRecord
-from .sparql import QueryResult
-from .transport import exchange
+from . import __version__, queries, registry
+from .model import SPECS, Outcome, ProbeResult, grade, not_applicable
+from .probes import layer_a, layer_b
+from .registry import EndpointValue, RegistryRecord
+from .sparql import QueryResult, run_query
+from .transport import Exchange, exchange
 
 CONTROL_URL = "https://www.w3.org/"
+HUB_ID = "HUB"
 
 
 @dataclass
@@ -48,6 +49,7 @@ class KgReport:
     dump_only: bool = False
     kpis: dict = field(default_factory=dict)
     queries: list[QueryResult] = field(default_factory=list)
+    extra_exchanges: list[Exchange] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     seconds: float = 0.0
 
@@ -58,14 +60,14 @@ class KgReport:
     def as_dict(self) -> dict:
         has_working = self.working is not None
         seen, exchanges = set(), []
-        for q in self.queries:
-            for hop in q.hops:
-                if hop.id not in seen:
-                    seen.add(hop.id)
-                    exchanges.append(hop.evidence())
+        for hop in [h for q in self.queries for h in q.hops] + self.extra_exchanges:
+            if hop.id not in seen:
+                seen.add(hop.id)
+                exchanges.append(hop.evidence())
         ordered = {pid: self.results[pid].as_dict() for pid in SPECS if pid in self.results}
         return {
             "id": self.record.id,
+            "kind": "hub" if self.record.id == HUB_ID else "record",
             "iri": self.record.iri,
             "title": self.record.title,
             "registered": [ev.raw for ev in self.record.endpoint_values],
@@ -89,8 +91,39 @@ def assess_record(record: RegistryRecord, config: RunConfig) -> KgReport:
     report.add(*a.results.values())
     report.working, report.dump_only = a.working, a.dump_only
     report.queries.extend(a.attempts)
+    if "B" in config.layers:
+        if a.working:
+            b = layer_b.assess(a.working, a.attempts, hub=config.hub_endpoint, heavy=config.heavy,
+                               is_hub=record.id == HUB_ID, **kwargs)
+        else:
+            b = layer_b.not_measurable(a.attempts, a.dump_only)
+        report.add(*b.results.values())
+        report.queries.extend(b.attempts)
+        report.extra_exchanges.extend(b.exchanges)
+        report.kpis.update(b.kpis)
     report.seconds = time.monotonic() - started
     return report
+
+
+def hub_record(endpoint: str) -> RegistryRecord:
+    """The KGI hub is monitored like a registered KG, although it is not one."""
+    return RegistryRecord(id=HUB_ID, iri=endpoint, title="KGI hub (registry endpoint)",
+                          endpoint_values=[EndpointValue(raw=endpoint, is_iri=True)])
+
+
+def variable_service(hub: str, target: str, **kwargs) -> dict:
+    """H1: does the hub accept SERVICE with a variable endpoint? Once per run."""
+    r = run_query(hub, queries.render("b_service_variable", endpoint=target), "get", purpose="H1 hub", **kwargs)
+    basis = "SPARQL 1.1 Federated Query §4 (informative): a capability gap, not non-compliance"
+    if r.ok:
+        outcome, summary = "pass", f"the hub routes SERVICE ?endpoint (tried with {target})"
+    elif r.verdict == "transport":
+        outcome, summary = "unknown", f"the hub did not answer: {r.detail}"
+    else:
+        outcome, summary = "fail", f"the hub rejects SERVICE with a variable endpoint: {r.detail}"
+    return {"id": "H1", "title": "Federation from the registry's own data (SERVICE ?endpoint)",
+            "outcome": outcome, "summary": summary, "details": {"basis": basis, "target": target, "result": r.summary()},
+            "exchanges": [h.evidence() for h in r.hops]}
 
 
 def vantage() -> str:
@@ -110,7 +143,7 @@ def run(config: RunConfig) -> dict:
         "hub_endpoint": config.hub_endpoint,
         "status": "ok",
         "registry_findings": [],
-        "hub": {},
+        "hub_findings": [],
         "kgs": [],
     }
 
@@ -135,12 +168,19 @@ def run(config: RunConfig) -> dict:
     report["registry_findings"] = [f.as_dict() for f in registry.findings(snapshot)]
 
     records = [r for r in snapshot.records if not config.only or r.id in config.only]
+    targets = records + ([hub_record(config.hub_endpoint)] if not config.only or HUB_ID in config.only else [])
     with ThreadPoolExecutor(max_workers=config.max_workers) as pool:
-        kg_reports = list(pool.map(lambda rec: assess_record(rec, config), records))
+        kg_reports = list(pool.map(lambda rec: assess_record(rec, config), targets))
 
-    a6 = layer_a.duplicates(records, {r.record.id: r.working for r in kg_reports})
+    registered = [kg for kg in kg_reports if kg.record.id != HUB_ID]
+    a6 = layer_a.duplicates(records, {r.record.id: r.working for r in registered})
     for kg in kg_reports:
-        kg.add(a6[kg.record.id])
+        kg.add(a6.get(kg.record.id) or not_applicable("A6", "the hub is not a registry record"))
+
+    if "B" in config.layers and config.hub_endpoint:
+        target = next((kg.working.url for kg in registered if kg.working and kg.working.via == "registered"),
+                      config.hub_endpoint)
+        report["hub_findings"] = [variable_service(config.hub_endpoint, target, **config.request_kwargs())]
     report["kgs"] = [kg.as_dict() for kg in kg_reports]
     return _finish(report, clock)
 
@@ -153,7 +193,7 @@ def _finish(report: dict, clock: float) -> dict:
 
 
 def summarise(report: dict) -> dict:
-    kgs = report.get("kgs", [])
+    kgs = [kg for kg in report.get("kgs", []) if kg.get("kind", "record") == "record"]
     grades: dict[str, int] = {}
     for kg in kgs:
         grades[kg["grade"]] = grades.get(kg["grade"], 0) + 1

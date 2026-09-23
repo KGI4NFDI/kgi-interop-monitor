@@ -31,7 +31,8 @@ def outcomes(report, rid):
 
 def test_run_is_ok_and_covers_every_record(report):
     assert report["status"] == "ok"
-    assert len(report["kgs"]) == 15
+    assert len([k for k in report["kgs"] if k["kind"] == "record"]) == 15
+    assert report["summary"]["kgs"] == 15
 
 
 def test_healthy_clears_layer_a(report):
@@ -120,3 +121,9 @@ def test_ui_fragment_is_a_warning_and_is_dropped_from_the_working_url(report):
     k = kg(report, "KGR15")
     assert k["results"]["A7"]["outcome"] == "warn"
     assert "#" not in k["working"]["url"] and k["working"]["url"].endswith("/virtuoso/sparql")
+
+
+def test_the_hub_is_monitored_as_its_own_row(report):
+    hub = kg(report, "HUB")
+    assert hub["kind"] == "hub" and hub["working"]["via"] == "registered"
+    assert hub["results"]["A6"]["outcome"] == "n/a"

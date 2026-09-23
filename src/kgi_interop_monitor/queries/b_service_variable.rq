@@ -1,0 +1,10 @@
+# b_service_variable: does the hub accept SERVICE with a variable endpoint?
+# (B4, once per run)
+#
+# A registry that lists endpoints can only drive federation from its own data
+# if the endpoint can be a variable. Federated Query §4 describes this as
+# informative, so rejecting it is a capability gap, not non-compliance.
+SELECT * WHERE {
+  VALUES ?endpoint { <%%ENDPOINT%%> }
+  SERVICE ?endpoint { SELECT * WHERE { ?s ?p ?o } LIMIT 1 }
+}

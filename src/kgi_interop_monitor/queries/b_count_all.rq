@@ -1,0 +1,5 @@
+# b_count_all: number of triples in the default graph (B3, C1).
+#
+# Most engines answer COUNT(*) over a single triple pattern from index
+# statistics, in milliseconds, even on billions of triples.
+SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }
