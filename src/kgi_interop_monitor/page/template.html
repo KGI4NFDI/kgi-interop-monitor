@@ -80,7 +80,10 @@
 
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.45; }
-.wrap { max-width: 1480px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 36px; }
+/* minmax(0, 1fr): without it the wide matrix's min-content width blows the
+   column out and the whole page scrolls sideways. */
+.wrap { max-width: 1480px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
+.wrap > * { min-width: 0; }
 a { color: var(--accent); text-underline-offset: 2px; }
 a:hover { text-decoration-thickness: 2px; }
 button { font: inherit; color: inherit; }
@@ -231,7 +234,7 @@ table.plain { border-collapse: collapse; font-size: 13.5px; width: 100%; }
 
 /* drawer */
 .drawer { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: flex-end; background: var(--scrim); }
-.drawer-panel { width: min(640px, 100%); height: 100%; overflow-y: auto; background: var(--surface); box-shadow: var(--shadow); padding: calc(env(safe-area-inset-top, 0px) + 22px) 24px calc(env(safe-area-inset-bottom, 0px) + 40px); display: grid; gap: 22px; align-content: start; }
+.drawer-panel { box-sizing: border-box; width: min(640px, 100%); height: 100%; overflow-y: auto; background: var(--surface); box-shadow: var(--shadow); padding: calc(env(safe-area-inset-top, 0px) + 22px) 24px calc(env(safe-area-inset-bottom, 0px) + 40px); display: grid; gap: 22px; align-content: start; }
 .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .drawer-head h2 { font-size: 26px; }
 .close { border: 1px solid var(--rule); background: var(--surface); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
@@ -449,6 +452,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
     var m = Math.floor(sec / 60), r = Math.round(sec - m * 60);
     return m ? m + " min " + r + " s" : r + " s";
   }
+  function runsText(n) { return n + (n === 1 ? " run" : " runs"); }
   function oc(outcome) { return "o-" + (outcome === "n/a" ? "na" : outcome); }
   function gradeClass(g) { return "g-" + (g === "A*" ? "astar" : String(g).toLowerCase()); }
   function gradeChip(g, small) {
@@ -481,7 +485,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
       ["Checked", records.length + " records and the hub"],
       ["Layers", (R.monitor && R.monitor.layers) || "—"],
       ["Measured from", (R.monitor && R.monitor.vantage) || "—"],
-      ["History", (D.runs_total || 0) + (D.runs_total === 1 ? " run" : " runs")]
+      ["History", runsText(D.runs_total || 0)]
     ];
     rows.forEach(function (r) { dl.appendChild(h("dt", null, r[0])); dl.appendChild(h("dd", null, r[1])); });
     if (R.status && R.status !== "ok") {
@@ -648,7 +652,7 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
           h("span", { "class": "num" }, Math.round(kp.latency_ms) + " ms"), sparkline(hist.series))
       : h("span", { "class": "err" }, errorLabel(k));
     var up = hist.availability != null
-      ? h("span", { "class": "num", title: hist.available + " of " + hist.runs + " runs" + (hist.flaps ? ", " + hist.flaps + " changes" : "") }, Math.round(hist.availability) + "%", h("span", { "class": "muted" }, " /" + hist.runs))
+      ? h("span", { "class": "num", title: hist.available + " of " + runsText(hist.runs) + (hist.flaps ? ", " + hist.flaps + " changes" : "") }, Math.round(hist.availability) + "%", h("span", { "class": "muted" }, " /" + hist.runs))
       : h("span", { "class": "muted" }, "—");
     var proto = kp.protocol ? h("span", { "class": "num" }, kp.protocol.passed + "/" + kp.protocol.total) : h("span", { "class": "muted" }, "—");
     var tr = h("tr", { "data-id": k.id, "class": k.kind === "hub" ? "hubrow" : null }, th, gradeTd, h("td", null, lat), h("td", null, up), h("td", null, proto));
@@ -784,9 +788,9 @@ footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--rule)
     if (eng) fact("Engine", eng.engine ? [engineName(k), h("div", { "class": "muted" }, eng.evidence || "")] : h("span", { "class": "muted" }, "not identified" + (eng.server_headers && eng.server_headers.length ? " (Server: " + eng.server_headers.join(", ") + ")" : "")));
     if (kp.available) {
       fact("Latency", (kp.latency_ms != null ? Math.round(kp.latency_ms) + " ms median of " + (kp.latency_samples_ms || []).length + " ASK requests" : "—") +
-        (hist.latency_p50 != null ? "; " + Math.round(hist.latency_p50) + " ms median, " + Math.round(hist.latency_p95) + " ms 95th percentile over " + hist.runs + " runs" : ""));
+        (hist.latency_p50 != null ? "; " + Math.round(hist.latency_p50) + " ms median, " + Math.round(hist.latency_p95) + " ms 95th percentile over " + runsText(hist.runs) : ""));
     }
-    if (hist.availability != null) fact("Answered", Math.round(hist.availability) + "% of " + hist.runs + " runs in the last " + WINDOW + " days" + (hist.flaps ? ", " + hist.flaps + " changes" : ""));
+    if (hist.availability != null) fact("Answered", Math.round(hist.availability) + "% of " + runsText(hist.runs) + " in the last " + WINDOW + " days" + (hist.flaps ? ", " + hist.flaps + " changes" : ""));
     if (kp.triples != null) fact("Triples", fmtInt(kp.triples) + " in the default graph" + (kp.named_graphs ? ", " + kp.named_graphs + " named graphs" : "") + (kp.triples_mode ? " (triples mode, no named graphs)" : ""));
     if (kp.formats) fact("Result formats", kp.formats.length ? kp.formats.join(", ").toUpperCase() : "none of XML, CSV, TSV beyond the default");
     if (kp.tls_not_after) fact("TLS certificate", "valid until " + kp.tls_not_after + " (" + kp.tls_days_left + " days)");
