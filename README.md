@@ -34,7 +34,7 @@ Every judgement links to the HTTP requests and responses it was based on.
 ## Quick start
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -e ".[dev]"
+python -m venv .venv && .venv/bin/pip install -e ".[dev]" &&  source ./.venv/bin/activate
 kgi-interop-monitor run                 # full ladder against the live registry, about 7 minutes
 kgi-interop-monitor page                # results/ -> site/index.html
 pytest                                  # offline tests against a local fake endpoint
