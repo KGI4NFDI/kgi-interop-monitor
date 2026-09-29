@@ -5,21 +5,41 @@ build-backend = "hatchling.build"
 [project]
 name = "kgi-interop-monitor"
 dynamic = ["version"]
-description = "Query-layer monitor for the SPARQL endpoints in the KGI4NFDI registry (D2.1 checklist)"
+description = "nicescholia-based dashboard for the SPARQL endpoints in the KGI4NFDI registry"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
-authors = [{ name = "Daniel Viladrich" }]
+requires-python = ">=3.11"   # ngwidgets/nicescholia require 3.11
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: User Interfaces",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+]
 dependencies = [
-  "rdflib>=7.0",
-  "certifi>=2024.2.2",
+  # The PyPI release (0.0.4) predates the endpoint monitor and builds its own
+  # endpoint list internally, so the swap in nicekgi.py would have no effect.
+  "nicescholia @ git+https://github.com/WolfgangFahl/nicescholia.git@main",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+  # scripts/blackisort
+  "black>=24",
+  "isort>=5",
+]
+
+[project.urls]
+Home = "https://github.com/KGI4NFDI/kgi-interop-monitor"
 
 [project.scripts]
-kgi-interop-monitor = "kgi_interop_monitor.cli:main"
+kgi-interop-monitor = "kgi_interop_monitor.cmd:main"
 
 [tool.hatch.version]
 path = "src/kgi_interop_monitor/__init__.py"
@@ -27,13 +47,14 @@ path = "src/kgi_interop_monitor/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/kgi_interop_monitor"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = [
-  "live: talks to real endpoints on the internet (deselected by default)",
-]
-addopts = "-m 'not live'"
-filterwarnings = [
-  # rdflib 7.x deprecates Dataset.default_context and uses it internally
-  "ignore::DeprecationWarning:rdflib.*",
-]
+# src layout: strip the src/ prefix so the wheel installs kgi_interop_monitor/
+[tool.hatch.build.targets.wheel.sources]
+"src/kgi_interop_monitor" = "kgi_interop_monitor"
+
+[tool.hatch.metadata]
+allow-direct-references = true   # for the git dependency above
+
+# isort's default line length is 79, black's is 88, so without this the two
+# fight over any import line in between and scripts/blackisort never settles.
+[tool.isort]
+profile = "black"

@@ -1,0 +1,49 @@
+# This workflow will install Python dependencies and run the unittest suite
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Build
+
+on:
+  push:
+    branches-ignore: [results]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GHACTIONS: ACTIVE
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu only: the org's private repos share 2000 Actions minutes a
+        # month and GitHub bills windows at 2x and macos at 10x - see issue #36
+        os: [ubuntu-latest]
+        python-version: [ '3.11', '3.12', '3.13' ]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: install
+      run: |
+        scripts/install
+
+    # Offline: the tests start the webserver in-process via
+    # ngwidgets.webserver_test.WebserverTest - no browser, no network.
+    - name: Run tests
+      run: |
+        scripts/test

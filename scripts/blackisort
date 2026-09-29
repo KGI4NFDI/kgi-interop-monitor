@@ -1,0 +1,9 @@
+#!/bin/bash
+# DV 2026-09-29
+# format sources the BITPlan way: isort first, then black (88 cols)
+# src layout, so the package lives under src/
+package=src/kgi_interop_monitor
+isort tests/*.py
+black tests/*.py
+isort $package/*.py
+black $package/*.py
