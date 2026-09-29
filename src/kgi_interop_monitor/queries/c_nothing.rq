@@ -1,9 +1,0 @@
-# c_nothing: subsumptions of owl:Nothing (C3).
-#
-# owl:Nothing is the empty class, so "owl:Nothing rdfs:subClassOf X" holds for
-# every X and no modeller writes it down. It appears when reasoner output is
-# loaded next to the asserted ontology: on MatWerk, 165 of 181 subsumption rows
-# in the default graph were of this form (D21_CHECKLIST.md C2, C3).
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT (COUNT(*) AS ?n) WHERE { owl:Nothing rdfs:subClassOf ?c }
