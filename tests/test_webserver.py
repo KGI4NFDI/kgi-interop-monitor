@@ -7,7 +7,7 @@ Created on 2026-09-29
 from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor.cmd import KgiCmd
-from kgi_interop_monitor.nicekgi import KgiWebserver
+from kgi_interop_monitor.nicekgi import KgiEndpointDashboard, KgiWebserver
 
 
 class TestKgiWebserver(WebserverTest):
@@ -42,14 +42,49 @@ class TestKgiWebserver(WebserverTest):
         self.assertEqual("nicekgi", version.name)
         self.assertTrue(version.version)
 
-    def test_endpoints_are_empty(self):
+    def test_endpoints(self):
         """
-        test the whole customization surface of this template
+        test that the registry endpoints are listed with their consortium
 
-        get_endpoints is the one place to fill out; until it returns registry
-        records the dashboard renders an empty table.
+        Only endpoint values that are URLs get a row.
         """
         endpoints = self.ws.endpoints.get_endpoints()
         if self.debug:
-            print(endpoints)
-        self.assertEqual({}, endpoints)
+            print(f"{len(endpoints)} endpoints")
+        self.assertTrue(len(endpoints) > 0)
+        for key, endpoint in endpoints.items():
+            self.assertTrue(endpoint.endpoint.startswith("http"), key)
+            self.assertTrue(endpoint.group, key)
+        self.assertEqual("NFDI4Culture", endpoints["KGR7"].group)
+        self.assertNotIn("KGR19", endpoints)
+
+    def test_sorted_by_consortium(self):
+        """
+        test that the rows are sorted alphabetically by consortium, the
+        knowledge graphs without one last
+        """
+        endpoints = self.ws.endpoints.get_endpoints()
+        no_consortium = self.ws.endpoints.NO_CONSORTIUM
+        groups = [endpoint.group for endpoint in endpoints.values()]
+        named = [group for group in groups if group != no_consortium]
+        if self.debug:
+            print(groups)
+        self.assertEqual(sorted(named, key=str.casefold), named)
+        self.assertEqual(named, groups[: len(named)])
+        self.assertIn(no_consortium, groups)
+
+    def test_consortium_column(self):
+        """
+        test that nicescholia's hidden Group column becomes a Consortium column
+        in place, so that the grid's html_columns keep their positions
+        """
+        column_defs = [
+            {"headerName": "Group", "field": "group", "rowGroup": True, "hide": True},
+            {"headerName": "Service", "field": "name"},
+        ]
+        KgiEndpointDashboard.show_consortium(column_defs)
+        consortium = column_defs[0]
+        self.assertEqual("Consortium", consortium["headerName"])
+        self.assertFalse(consortium["hide"])
+        self.assertNotIn("rowGroup", consortium)
+        self.assertEqual("name", column_defs[1]["field"])

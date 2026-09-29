@@ -10,11 +10,12 @@ A minimal [nicescholia](https://github.com/WolfgangFahl/nicescholia) template: i
 reproduces the dashboard at
 [nicescholia.wikidata.dbis.rwth-aachen.de](https://nicescholia.wikidata.dbis.rwth-aachen.de/)
 — header, menu, footer, the endpoint grid with its columns and its 🟢🟡🔴 legend —
-with an **empty endpoint table**, ready to be pointed at the SPARQL endpoints of the
-[KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry.
+for the SPARQL endpoints of the
+[KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry, sorted by NFDI
+consortium.
 
 Everything on the page is nicescholia's own code. This repository supplies only the
-endpoint list, which is currently empty.
+endpoint list.
 
 ## Run it
 
@@ -31,7 +32,8 @@ kgi-interop-monitor -s            # serve on http://localhost:9001
 Without the console script: `python -m kgi_interop_monitor.cmd -s`.
 
 You should see the **Endpoint Monitor** heading, a Refresh button, the colour legend
-and an empty table. `/docs`, the generated OpenAPI page, comes for free.
+and one row per registered endpoint, sorted by consortium. **Refresh** sends every
+endpoint nicescholia's triple count query. `/docs`, the generated OpenAPI page, comes for free.
 
 ## There is no HTML
 
@@ -42,16 +44,32 @@ page in Python and pushes every widget to the browser over a websocket. So
 
 nicescholia is pinned to git `main` in `pyproject.toml`. The PyPI release (0.0.4)
 predates the endpoint monitor and builds its own endpoint list internally, so the
-swap below would have no effect on it.
+endpoint list below would have no effect on it.
 
-## Filling it in
+## The endpoint list
 
-Everything lives in one file,
-[`src/kgi_interop_monitor/nicekgi.py`](src/kgi_interop_monitor/nicekgi.py). The one
-place to fill out is `Endpoints.get_endpoints`: return one
-`lodstorage.query.Endpoint` per registry record, keyed by a short id. Measuring the
-Triples and Last Update columns needs two further methods on the same class, which
-its docstring names.
+The knowledge graphs are a snapshot of the registry in one config file,
+[`src/kgi_interop_monitor/resources/knowledge_graphs.yaml`](src/kgi_interop_monitor/resources/knowledge_graphs.yaml):
+one record per registry id with the name, the NFDI consortium, the website and the
+endpoint value exactly as the registry stores it. The file header says where and
+when it was taken.
+
+- The records come from the registry's own SPARQL endpoint, the KGI hub at
+  `https://sparql.kgi.services.base4nfdi.de/api/`.
+- The registry has no consortium property. The consortium is the dataset's
+  `dcterms:creator` where Wikidata types that creator as an *accepted NFDI
+  consortium*.
+- The rows are sorted alphabetically by consortium, which puts each
+  consortium's knowledge graphs together; those without one come last. The
+  Consortium column is nicescholia's own Group column made visible: nicescholia
+  groups its rows on that column, but row grouping needs AG Grid Enterprise,
+  which NiceGUI does not ship.
+- Only endpoint values that are URLs get a row. Missing and prose values
+  ("work in progress") are kept in the file but not shown.
+
+`Endpoints` in [`nicekgi.py`](src/kgi_interop_monitor/nicekgi.py) extends
+nicescholia's own, so the Triples and Last Update columns are measured with
+nicescholia's queries; it only replaces the endpoint list.
 
 ## Tests
 
@@ -62,7 +80,8 @@ scripts/test
 unittest, via `ngwidgets.webserver_test.WebserverTest` — the harness nicescholia
 uses. It starts the webserver in-process, with no browser and no network, and
 checks that the nicescholia pages are registered, that the version metadata is
-right and that the endpoint list is still empty.
+right, that the config file loads and that the registry endpoints are listed with
+their consortium, sorted by it.
 
 `scripts/blackisort` formats the sources and `scripts/doc` builds the API
 documentation. See [AGENTS.md](AGENTS.md) for the conventions this project

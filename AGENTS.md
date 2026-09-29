@@ -62,13 +62,16 @@ says a human stood behind it.
 
 | Path | Purpose |
 |------|---------|
-| `src/kgi_interop_monitor/nicekgi.py` | `KgiWebserver` / `KgiSolution` / `Endpoints` - the NiceGUI page and the endpoint list |
+| `src/kgi_interop_monitor/nicekgi.py` | `KgiWebserver` / `KgiSolution` / `KgiEndpointDashboard` / `Endpoints` - the NiceGUI page, its Consortium column and the endpoint list |
+| `src/kgi_interop_monitor/kgs.py` | `KnowledgeGraph` / `KnowledgeGraphs` - the model of the registry snapshot |
+| `src/kgi_interop_monitor/resources/knowledge_graphs.yaml` | the registry snapshot: name, consortium, website and endpoint per knowledge graph |
 | `src/kgi_interop_monitor/cmd.py` | `KgiCmd` command line entry point |
 | `src/kgi_interop_monitor/__init__.py` | `__version__` - single source of the version |
 | `tests/` | unittest based tests (`ngwidgets.webserver_test.WebserverTest`) |
 
 `Endpoints.get_endpoints` is the whole customization surface: one
-`lodstorage.query.Endpoint` per registry record, keyed by a short id.
+`lodstorage.query.Endpoint` per registry record whose endpoint value is a URL,
+keyed by registry id and sorted by consortium.
 
 ## Conventions
 
