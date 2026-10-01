@@ -7,10 +7,18 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-# install the package; the build files are not needed afterwards
-COPY pyproject.toml README.md LICENSE /build/
+# install the dependencies in their own layer for faster rebuilds
+COPY pyproject.toml /build/
+RUN python -c "import sys, tomllib; \
+        project = tomllib.load(sys.stdin.buffer)['project']; \
+        print('\n'.join(project['dependencies']))" \
+        < /build/pyproject.toml > /build/requirements.txt \
+    && pip install --no-cache-dir --requirement /build/requirements.txt
+
+# install the package itself; the build files are not needed afterwards
+COPY README.md LICENSE /build/
 COPY src /build/src
-RUN pip install --no-cache-dir /build && rm -rf /build
+RUN pip install --no-cache-dir --no-deps /build && rm -rf /build
 
 # unprivileged user; the app writes its caches and states into its home
 RUN useradd --create-home kgi
