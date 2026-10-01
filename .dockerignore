@@ -1,0 +1,7 @@
+# only what the image copies
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!src
+**/__pycache__
