@@ -8,10 +8,6 @@ dist/
 .venv/
 .pytest_cache/
 
-# Local run output.
-/results/
-/out/
-
 # mkdocs: scripts/doc generates both docs/index.md and site/
 /docs/
 /site/

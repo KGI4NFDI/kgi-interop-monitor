@@ -21,10 +21,6 @@ class TestKgiWebserver(WebserverTest):
     def test_pages_are_registered(self):
         """
         test that the nicescholia chrome registered its pages
-
-        The pages are not fetched here: NiceGUI builds them over a websocket
-        and schedules background tasks on the server event loop, so a plain
-        GET from the test client is not how a page is exercised.
         """
         paths = [getattr(route, "path", None) for route in self.ws.app.routes]
         if self.debug:
@@ -76,7 +72,6 @@ class TestKgiWebserver(WebserverTest):
     def test_consortium_column(self):
         """
         test that nicescholia's hidden Group column becomes a Consortium column
-        in place, so that the grid's html_columns keep their positions
         """
         column_defs = [
             {"headerName": "Group", "field": "group", "rowGroup": True, "hide": True},

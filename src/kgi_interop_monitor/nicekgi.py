@@ -1,10 +1,6 @@
 """
-Webserver definition - a minimal nicescholia dashboard for the SPARQL endpoints
-of the KGI4NFDI registry.
-
-The page is nicescholia's own: header, menu, footer, the endpoint grid with its
-columns and its colour legend, all imported from nscholia. Only the endpoint
-list is ours - see Endpoints.get_endpoints below.
+Webserver definition - nicescholia dashboard for the SPARQL endpoints of the
+KGI4NFDI registry.
 
 Created on 2026-09-29
 
@@ -35,7 +31,6 @@ class Version:
     date = "2026-09-29"
     updated = "2026-09-29"
     description = "nicescholia dashboard for the KGI4NFDI registry endpoints"
-    # authorship undecided - see the scoping discussion
     authors = ""
     doc_url = "https://github.com/KGI4NFDI/kgi-interop-monitor"
     chat_url = "https://github.com/KGI4NFDI/kgi-interop-monitor/discussions"
@@ -50,11 +45,8 @@ class Version:
 
 class Endpoints(ScholiaEndpoints):
     """
-    endpoints access - the whole customization surface of this template
-
-    nscholia's Endpoints brings the queries the dashboard measures with (the
-    Triples and Last Update columns); this one only replaces its endpoint list
-    with the knowledge graphs of the KGI4NFDI registry.
+    the KGI4NFDI registry endpoints; nicescholia's Endpoints supplies the
+    queries the dashboard measures with
     """
 
     # consortium shown for the knowledge graphs whose registry record names none
@@ -96,7 +88,7 @@ class Endpoints(ScholiaEndpoints):
         list the registered SPARQL endpoints, sorted by consortium
 
         Registry records whose endpoint value is missing or prose ("work in
-        progress") get no row: there is nothing a client could query.
+        progress") get no row.
 
         Returns:
             mapping of registry id to Endpoint, sorted by consortium
@@ -118,19 +110,14 @@ class KgiEndpointDashboard(EndpointDashboard):
     """
     nicescholia's endpoint dashboard with a Consortium column
 
-    nicescholia keeps the group of each endpoint in a hidden row-group column.
-    Row grouping needs AG Grid Enterprise, which NiceGUI does not ship, so that
-    column is shown as Consortium instead, and Endpoints.get_endpoints sorts the
-    rows by consortium, which puts each consortium's rows together.
+    Row grouping needs AG Grid Enterprise, which NiceGUI does not ship, so the
+    group is shown as a column and the rows are sorted by it.
     """
 
     @staticmethod
     def show_consortium(column_defs: List[dict]) -> List[dict]:
         """
         turn nicescholia's hidden Group column into a visible Consortium column
-
-        The column stays where it is: the grid counts its html_columns by
-        position.
 
         Args:
             column_defs: the AG Grid column definitions, changed in place
@@ -181,7 +168,7 @@ class KgiWebserver(InputWebserver):
     def __init__(self):
         super().__init__(config=KgiWebserver.get_config())
         self.endpoints = Endpoints()
-        # triple counts measured with real queries, cached on disk between runs
+        # measured states, cached on disk between runs
         self.update_state_cache = UpdateStateCache()
 
 
@@ -196,7 +183,6 @@ class KgiSolution(InputWebSolution):
         """
 
         def show():
-            # Instantiate the View Component
             self.endpoint_dashboard = KgiEndpointDashboard(self)
             self.endpoint_dashboard.setup_ui()
 

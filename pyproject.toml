@@ -23,8 +23,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
-  # The PyPI release (0.0.4) predates the endpoint monitor and builds its own
-  # endpoint list internally, so the swap in nicekgi.py would have no effect.
   "nicescholia @ git+https://github.com/WolfgangFahl/nicescholia.git@main",
 ]
 
@@ -54,7 +52,6 @@ packages = ["src/kgi_interop_monitor"]
 [tool.hatch.metadata]
 allow-direct-references = true   # for the git dependency above
 
-# isort's default line length is 79, black's is 88, so without this the two
-# fight over any import line in between and scripts/blackisort never settles.
+# match black's line length
 [tool.isort]
 profile = "black"

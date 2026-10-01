@@ -4,24 +4,21 @@
 
 kgi-interop-monitor is a [nicescholia](https://github.com/WolfgangFahl/nicescholia)
 based dashboard for the SPARQL endpoints of the
-[KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry. The page is
-nicescholia's own - header, menu, footer, the endpoint grid with its columns and
-its colour legend. This repository supplies the endpoint list.
+[KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry. This repository
+supplies the endpoint list.
 
 - **GitHub**: https://github.com/KGI4NFDI/kgi-interop-monitor
 - **Upstream**: [nicescholia](https://github.com/WolfgangFahl/nicescholia) - the
   dashboard, its widgets and its endpoint model all come from there
 - **Upstream wiki**: https://wiki.bitplan.com/index.php/nicescholia
-- **Agent rules**: `Agent/Guido/BITPlan` on BITPlan's media wiki - the canonical
-  BITPlan Python conventions. media.bitplan.com does not resolve publicly
-  (checked 2026-09-29), so the conventions this project follows are written out
-  under [Conventions](#conventions) below.
+- **Agent rules**: `Agent/Guido/BITPlan` on BITPlan's media wiki; the
+  conventions this project follows are under [Conventions](#conventions)
 
 ## Boot
 
 Agents working in this repository perform the mandatory boot sequence of the
-`Agents` page on BITPlan's media wiki (wikipush wiki id `media`, not publicly
-reachable): PLAN-AND-ASK, Document-First, DMAIC histogram, English-only.
+`Agents` page on BITPlan's media wiki: PLAN-AND-ASK, Document-First, DMAIC
+histogram, English-only.
 
 **PLAN-AND-ASK is not optional here.** The scope of this project is agreed with
 the maintainers before code is written; an agent that produces features which

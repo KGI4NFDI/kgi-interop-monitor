@@ -1,10 +1,6 @@
 """
-The knowledge graphs of the KGI4NFDI registry, kept as a YAML config file.
-
-The file is a snapshot of the registry: resources/knowledge_graphs.yaml, read
-and written with basemkit's yamlable, the mechanism pyLoDStorage uses for its
-own endpoints.yaml. That format cannot carry the consortium - its loader drops
-unknown keys - hence this small model of our own.
+The knowledge graphs of the KGI4NFDI registry, kept in
+resources/knowledge_graphs.yaml.
 
 Created on 2026-09-29
 
@@ -35,7 +31,7 @@ class KnowledgeGraph:
     @property
     def endpoint_is_url(self) -> bool:
         """
-        does the registered endpoint value at least look like a URL?
+        is the registered endpoint value a URL?
         """
         is_url = bool(self.endpoint) and self.endpoint.startswith(
             ("http://", "https://")
