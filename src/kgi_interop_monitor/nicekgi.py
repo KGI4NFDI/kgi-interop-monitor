@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 from lodstorage.query import Endpoint
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
+from nicegui import ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
@@ -157,7 +158,6 @@ class KgiWebserver(InputWebserver):
         config = WebserverConfig(
             short_name="nicekgi",
             timeout=6.0,
-            copy_right="(c) 2026 Daniel Viladrich",
             version=Version(),
             default_port=9001,
         )
@@ -176,6 +176,43 @@ class KgiSolution(InputWebSolution):
     """
     Handling specific page requests for a client session.
     """
+
+    # menu buttons of the ngwidgets default menu that are not shown
+    HIDDEN_BUTTONS = ("settings", "github", "help")
+    # menu buttons of the ngwidgets default menu shown under another name
+    RENAMED_BUTTONS = {"chat": "feedback"}
+
+    def link_button(
+        self, name: str, target: str, icon_name: str, new_tab: bool = True
+    ) -> Optional[ui.link]:
+        """
+        ngwidgets' menu button, hidden or renamed for the reduced menu
+
+        Args:
+            name: the name to be displayed on the button
+            target: the target URL opened when the button is clicked
+            icon_name: the name of the icon to be displayed on the button
+            new_tab: if True open the link in a new tab
+
+        Returns:
+            the link holding the button, None when the button is hidden
+        """
+        link_btn = None
+        if name not in self.HIDDEN_BUTTONS:
+            name = self.RENAMED_BUTTONS.get(name, name)
+            link_btn = super().link_button(name, target, icon_name, new_tab=new_tab)
+        return link_btn
+
+    async def setup_footer(self, *args, **kwargs):
+        """
+        the footer: a link to nicescholia
+        """
+        await super().setup_footer(*args, **kwargs)
+        self.footer.clear()
+        with self.footer:
+            ui.link(
+                "Powered by nicescholia", "https://github.com/WolfgangFahl/nicescholia"
+            ).style("color: #fff")
 
     async def home(self):
         """
