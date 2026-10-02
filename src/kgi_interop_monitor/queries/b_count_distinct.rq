@@ -1,6 +1,0 @@
-# b_count_distinct: number of distinct subjects over the same pattern (B3).
-#
-# Same pattern as b_count_all, different shape: DISTINCT has to materialise
-# the subjects. On Wikidata this times out where COUNT(*) takes 100 to 600 ms
-# (D21_CHECKLIST.md B3). Only sent below the politeness size gate (ADR 0004).
-SELECT (COUNT(DISTINCT ?s) AS ?n) WHERE { ?s ?p ?o }

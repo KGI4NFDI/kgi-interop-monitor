@@ -1,5 +1,0 @@
-# b_select: one bounded SELECT, sent in all three request forms (B1).
-#
-# LIMIT 1 keeps it free on any store. The answer does not matter; whether a
-# results document comes back in every form does.
-SELECT * WHERE { ?s ?p ?o } LIMIT 1

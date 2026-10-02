@@ -1,0 +1,8 @@
+#!/bin/bash
+# DV 2026-09-29
+# format with isort, then black
+package=src/kgi_interop_monitor
+isort tests/*.py
+black tests/*.py
+isort $package/*.py
+black $package/*.py

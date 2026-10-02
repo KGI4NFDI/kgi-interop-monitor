@@ -1,6 +1,0 @@
-# a_ask: the smallest possible SPARQL query.
-#
-# Used by A3, A4 and A7 to ask "is there a SPARQL service at this URL?".
-# ASK {} has exactly one correct answer (true), needs no data and costs the
-# server nothing, so any engine can answer it in every request form.
-ASK {}

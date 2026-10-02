@@ -1,0 +1,25 @@
+# CITATION.cff for https://github.com/KGI4NFDI/kgi-interop-monitor
+cff-version: 1.2.0
+title: kgi-interop-monitor
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Daniel
+    family-names: Viladrich Herrmannsdoerfer
+    orcid: 'https://orcid.org/0009-0006-6861-6495'
+repository-code: 'https://github.com/KGI4NFDI/kgi-interop-monitor'
+abstract: >-
+  nicescholia based dashboard for the SPARQL endpoints in the
+  KGI4NFDI registry
+keywords:
+  - KGI4NFDI
+  - NFDI
+  - Wikidata
+  - SPARQL
+  - Knowledge Graph
+  - NiceGUI
+  - nicescholia
+  - Python
+license: MIT

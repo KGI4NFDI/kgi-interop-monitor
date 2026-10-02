@@ -8,11 +8,9 @@ dist/
 .venv/
 .pytest_cache/
 
-# Local run output. Scheduled results live on the orphan `results` branch,
-# never on main (see docs/decisions/0006-results-branch.md).
-/results/
+# mkdocs: scripts/doc generates both docs/index.md and site/
+/docs/
 /site/
-/out/
 
 # Editors and OS
 .vscode/

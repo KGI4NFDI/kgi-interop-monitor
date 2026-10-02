@@ -1,0 +1,166 @@
+source: https://sparql.kgi.services.base4nfdi.de/api/
+fetched: '2026-09-29T21:23:58Z'
+consortium_source: dcterms:creator of the dataset, where Wikidata types the creator
+  as an accepted NFDI consortium; English Wikidata label
+kgs:
+  KGR1:
+    name: Aktienführer Knowledge Graph
+    consortium: BERD@NFDI
+    website: https://akf.kgi.uni-mannheim.de
+    endpoint: https://query.akf.kgi.uni-mannheim.de
+  KGR4:
+    name: ClaimsKG
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/claimskg
+    endpoint: https://data.gesis.org/claimskg/sparql
+  KGR7:
+    name: Culture Knowledge Graph
+    consortium: NFDI4Culture
+    website: https://nfdi4culture.de/resources/knowledge-graph
+    endpoint: https://nfdi4culture.de/sparql
+  KGR9:
+    name: Das Datenportal für Deutschland
+    website: https://www.govdata.de
+    endpoint: https://www.govdata.de/web/guest/sparql-assistent
+  KGR11:
+    name: Data Set Knowledge Graph (DSKG)
+    website: http://dskg.org
+    endpoint: not available anymore
+  KGR14:
+    name: dblp computer science bibliography
+    endpoint: https://sparql.dblp.org
+  KGR16:
+    name: FactGRID
+    consortium: NFDI4Memory
+    website: https://database.factgrid.de
+    endpoint: https://database.factgrid.de/query
+  KGR19:
+    name: Gemeinsame Normdatei (GND)
+    consortium: Text+
+    website: https://www.dnb.de/EN/Professionell/Metadatendienste/Datenbezug/LDS/lds_node.html
+    endpoint: work in progress
+  KGR22:
+    name: InteractOA (using Wikidata)
+    consortium: NFDI4Microbiota
+    website: https://interactoa.toolforge.org/
+  KGR23:
+    name: Linked Stage Graph
+    consortium: NFDI4Culture
+    website: https://slod.fiz-karlsruhe.de/about
+    endpoint: https://slod.fiz-karlsruhe.de/sparql
+  KGR25:
+    name: LinkedOpenData-Service des B3Kat
+    website: http://lod.b3kat.de/doc/de/willkommen-beim-linkedopendata-service-des-b3kat-lodb3katde
+    endpoint: https://lod.b3kat.de/doc/sparql-endpoint
+  KGR28:
+    name: MaRDI portal
+    consortium: MaRDI
+    website: https://portal.mardi4nfdi.de
+    endpoint: https://query.portal.mardi4nfdi.de
+  KGR31:
+    name: MaschinenBauIndustrie KG
+    consortium: BERD@NFDI
+    website: https://mbi.kgi.uni-mannheim.de
+    endpoint: https://query.mbi.kgi.uni-mannheim.de
+  KGR34:
+    name: Matwerk
+    website: https://msekg-nfdi-matwerk-02.web.vulcanus.otc.coscine.dev/matwerk/
+    endpoint: https://sparql-nfdi-matwerk-02.web.vulcanus.otc.coscine.dev/sparql
+  KGR36:
+    name: NFDI4Earth Knowledge Graph
+    consortium: NFDI4Earth
+    website: https://knowledgehub.nfdi4earth.de/
+    endpoint: https://sparql.knowledgehub.nfdi4earth.de/#/dataset/knowledge-graph/query
+  KGR38:
+    name: NFDI4Objects Knowledge Graph
+    consortium: NFDI4Objects
+    website: https://graph.nfdi4objects.net/
+    endpoint: https://graph.nfdi4objects.net/sparql
+  KGR40:
+    name: Nomisma
+    consortium: NFDI4Objects
+    website: https://nomisma.org
+    endpoint: https://nomisma.org/sparql/
+  KGR43:
+    name: Open Research Knowledge Graph
+    consortium: NFDI4DataScience
+    website: https://orkg.org
+    endpoint: https://orkg.org/triplestore; https://orkg.org/sparql
+  KGR46:
+    name: OpenAIRE Research Graph
+    website: https://explore.openaire.eu ; https://monitor.openaire.eu ; https://osobservatory.openaire.eu
+  KGR48:
+    name: Question Features Sample
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/questionfeaturessample
+    endpoint: https://data.gesis.org/questionfeaturessample/sparql
+  KGR50:
+    name: SciMesh
+    consortium: NFDI4ING
+    website: https://scimesh.org/about/
+  KGR51:
+    name: Semantic Kompakkt
+    consortium: NFDI4Culture
+    website: https://wikibase.semantic-kompakkt.de
+    endpoint: https://query.semantic-kompakkt.de
+  KGR54:
+    name: SoftwareKG
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/softwarekg/
+    endpoint: https://data.gesis.org/softwarekg/sparql
+  KGR57:
+    name: SoMeSci
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/somesci
+    endpoint: https://data.gesis.org/somesci/sparql
+  KGR60:
+    name: The official portal for European data
+    website: https://data.europa.eu
+    endpoint: https://data.europa.eu/sparql
+  KGR62:
+    name: TweetsCov19
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/tweetscov19/
+    endpoint: https://data.gesis.org/tweetscov19/sparql
+  KGR65:
+    name: TweetsKB
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/tweetskb
+    endpoint: https://data.gesis.org/tweetskb/sparql
+  KGR68:
+    name: Unified Helmholtz Information and Data Exchange (UnHide)
+    website: https://search.unhide.helmholtz-metadaten.de/
+  KGR69:
+    name: Wikidata
+    website: https://www.wikidata.org
+    endpoint: https://query.wikidata.org
+  KGR72:
+    name: Semantic Kompakkt
+    consortium: NFDI4Culture
+    website: https://wikibase.semantic-kompakkt.de/wiki/Main_Page
+    endpoint: https://query.semantic-kompakkt.de/
+  KGR74:
+    name: Materials Science and Engineering Knowledge Graph
+    consortium: NFDI-MatWerk
+    website: https://nfdi.fiz-karlsruhe.de/matwerk/
+    endpoint: https://nfdi.fiz-karlsruhe.de/matwerk/sparql
+  KGR77:
+    name: NFDI4BIOIMAGE KG
+    consortium: NFDI4BIOIMAGE
+    website: https://kg.nfdi4bioimage.de/
+    endpoint: https://kg.nfdi4bioimage.de/N4BIKG/sparql
+  KGR80:
+    name: GESIS KG
+    consortium: NFDI4DataScience
+    website: https://data.gesis.org/gesiskg/
+    endpoint: https://data.gesis.org/gesiskg/sparql
+  KGR83:
+    name: FactGrid
+    consortium: NFDI4Memory
+    website: https://database.factgrid.de/wiki/Main_Page
+    endpoint: https://database.factgrid.de/query/
+  KGR85:
+    name: RADAR
+    consortium: Base4NFDI, NFDI4Chem, NFDI4Culture, NFDI4Memory
+    website: https://www.radar-service.eu/knowledgegraph
+    endpoint: https://www.radar-service.eu/sparql

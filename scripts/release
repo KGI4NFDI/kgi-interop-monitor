@@ -1,0 +1,7 @@
+#!/bin/bash
+# DV 2026-09-29
+# prepare a release
+scripts/doc -d
+
+git commit -a -m "release commit"
+git push

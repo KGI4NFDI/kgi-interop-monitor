@@ -1,0 +1,19 @@
+site_name: kgi-interop-monitor API Documentation
+theme:
+  name: material
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          setup_commands:
+            - import sys
+            - import os
+            - sys.path.insert(0, os.path.abspath("src"))
+          selection:
+            docstring_style: google
+          rendering:
+            show_source: true
+nav:
+  - API: index.md
