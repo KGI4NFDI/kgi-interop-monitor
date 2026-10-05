@@ -223,6 +223,8 @@ class KgiWebserver(InputWebserver):
         self.endpoints = Endpoints()
         # measured states, cached on disk between runs
         self.update_state_cache = UpdateStateCache()
+        # the last federation check, kept in memory only
+        self.federation = {}
 
         @ui.page("/federation")
         async def federation(client: Client):
@@ -300,9 +302,9 @@ class KgiSolution(InputWebSolution):
             for key in endpoints:
                 column_defs.append({"headerName": key, "field": key, "width": 70})
 
-            def show_matrix(matrix: dict):
+            def show_matrix():
                 rows = []
-                for source, errors in matrix.items():
+                for source, errors in self.webserver.federation.items():
                     row = {"key": source, "name": f"{source} {endpoints[source].name}"}
                     for target, error in errors.items():
                         # the source itself does not answer / cannot call target
@@ -315,8 +317,10 @@ class KgiSolution(InputWebSolution):
 
             async def refresh():
                 ui.notify("Checking federation ...")
-                matrix = await run.io_bound(self.webserver.endpoints.check_federation)
-                show_matrix(matrix)
+                self.webserver.federation = await run.io_bound(
+                    self.webserver.endpoints.check_federation
+                )
+                show_matrix()
                 ui.notify("Federation check complete")
 
             def show_detail(event):
@@ -340,5 +344,6 @@ class KgiSolution(InputWebSolution):
             options = {"columnDefs": column_defs, "rowData": []}
             grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
             grid.on("cellClicked", show_detail)
+            show_matrix()
 
         await self.setup_content_div(show)
