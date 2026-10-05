@@ -128,26 +128,34 @@ class Endpoints(ScholiaEndpoints):
         """
         send the federated test query for every ordered pair of endpoints
 
+        Each source is asked the plain query first; when that fails, its
+        federated queries are not sent.
+
         Returns:
             by registry id of the source, then of the target: None when the
-            source could call the target, else the error
+            source could call the target, else the error - under its own id
+            the outcome of the plain query
         """
         endpoints = self.get_endpoints()
+        plain_query = self.query("plain")
         federation_query = self.query("federation")
         matrix = {}
         for source, source_ep in endpoints.items():
             sparql = SPARQL(source_ep.endpoint, agent=USER_AGENT)
             matrix[source] = {}
-            for target, target_ep in endpoints.items():
-                if target == source:
-                    continue
-                query = federation_query.replace("TARGET", target_ep.endpoint)
+            for target in [source] + [key for key in endpoints if key != source]:
+                query = plain_query
+                if target != source:
+                    target_url = endpoints[target].endpoint
+                    query = federation_query.replace("TARGET", target_url)
                 try:
                     qlod = sparql.queryAsListOfDicts(query)
                     error = None if qlod else "empty result"
                 except Exception as ex:
                     error = f"{type(ex).__name__}: {ex}"
                 matrix[source][target] = error
+                if error and target == source:
+                    break
         return matrix
 
 

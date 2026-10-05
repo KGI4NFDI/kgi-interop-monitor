@@ -102,6 +102,14 @@ class TestKgiWebserver(WebserverTest):
         )
         self.assertEqual(list(endpoints), list(matrix))
         for source, row in matrix.items():
-            self.assertEqual(len(endpoints) - 1, len(row))
-            self.assertNotIn(source, row)
+            self.assertEqual(len(endpoints), len(row))
             self.assertEqual({None}, set(row.values()))
+
+    def test_check_federation_source_down(self):
+        """
+        test that a source that fails the plain query is asked nothing else
+        """
+        with patch.object(SPARQL, "queryAsListOfDicts", side_effect=OSError("down")):
+            matrix = self.ws.endpoints.check_federation()
+        for source, row in matrix.items():
+            self.assertEqual({source: "OSError: down"}, row)
