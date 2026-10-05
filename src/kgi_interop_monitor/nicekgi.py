@@ -260,6 +260,12 @@ class KgiSolution(InputWebSolution):
             link_btn = super().link_button(name, target, icon_name, new_tab=new_tab)
         return link_btn
 
+    def configure_menu(self):
+        """
+        add the federation matrix page to the menu
+        """
+        self.link_button("federation", "/federation", "grid_on", new_tab=False)
+
     async def setup_footer(self, *args, **kwargs):
         """
         the footer: a link to nicescholia
