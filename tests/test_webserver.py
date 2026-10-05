@@ -4,6 +4,9 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+from unittest.mock import patch
+
+from lodstorage.sparql import SPARQL
 from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor.cmd import KgiCmd
@@ -83,3 +86,22 @@ class TestKgiWebserver(WebserverTest):
         self.assertFalse(consortium["hide"])
         self.assertNotIn("rowGroup", consortium)
         self.assertEqual("name", column_defs[1]["field"])
+
+    def test_check_federation(self):
+        """
+        test that every ordered pair of endpoints is asked - no endpoint is
+        queried here
+        """
+        endpoints = self.ws.endpoints.get_endpoints()
+        with patch.object(
+            SPARQL, "queryAsListOfDicts", return_value=[{"ok": 1}]
+        ) as ask:
+            matrix = self.ws.endpoints.check_federation()
+        self.assertIn(
+            "SERVICE <https://nfdi4culture.de/sparql>", str(ask.call_args_list)
+        )
+        self.assertEqual(list(endpoints), list(matrix))
+        for source, row in matrix.items():
+            self.assertEqual(len(endpoints) - 1, len(row))
+            self.assertNotIn(source, row)
+            self.assertEqual({None}, set(row.values()))

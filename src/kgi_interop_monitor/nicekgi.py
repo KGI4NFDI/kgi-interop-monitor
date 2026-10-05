@@ -8,14 +8,17 @@ Created on 2026-09-29
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from lodstorage.query import Endpoint
+from lodstorage.sparql import SPARQL
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
 from nicegui import ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
+from nscholia.useragent import USER_AGENT
 
 import kgi_interop_monitor
 from kgi_interop_monitor.kgs import KnowledgeGraph, KnowledgeGraphs
@@ -105,6 +108,47 @@ class Endpoints(ScholiaEndpoints):
             endpoint.group = kg.consortium or self.NO_CONSORTIUM
             endpoints[key] = endpoint
         return endpoints
+
+    @classmethod
+    def query(cls, name: str) -> str:
+        """
+        the SPARQL query of the given name
+
+        Args:
+            name: the file name in resources/queries, without .rq
+
+        Returns:
+            the query text
+        """
+        path = Path(__file__).parent / "resources" / "queries" / f"{name}.rq"
+        query = path.read_text()
+        return query
+
+    def check_federation(self) -> Dict[str, Dict[str, Optional[str]]]:
+        """
+        send the federated test query for every ordered pair of endpoints
+
+        Returns:
+            by registry id of the source, then of the target: None when the
+            source could call the target, else the error
+        """
+        endpoints = self.get_endpoints()
+        federation_query = self.query("federation")
+        matrix = {}
+        for source, source_ep in endpoints.items():
+            sparql = SPARQL(source_ep.endpoint, agent=USER_AGENT)
+            matrix[source] = {}
+            for target, target_ep in endpoints.items():
+                if target == source:
+                    continue
+                query = federation_query.replace("TARGET", target_ep.endpoint)
+                try:
+                    qlod = sparql.queryAsListOfDicts(query)
+                    error = None if qlod else "empty result"
+                except Exception as ex:
+                    error = f"{type(ex).__name__}: {ex}"
+                matrix[source][target] = error
+        return matrix
 
 
 class KgiEndpointDashboard(EndpointDashboard):
