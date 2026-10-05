@@ -303,11 +303,12 @@ class KgiSolution(InputWebSolution):
             def show_matrix(matrix: dict):
                 rows = []
                 for source, errors in matrix.items():
-                    row = {"name": f"{source} {endpoints[source].name}"}
+                    row = {"key": source, "name": f"{source} {endpoints[source].name}"}
                     for target, error in errors.items():
                         # the source itself does not answer / cannot call target
                         failed = "🔴" if target == source else "🟡"
                         row[target] = failed if error else "🟢"
+                        row[f"{target}_error"] = error
                     rows.append(row)
                 grid.options["rowData"] = rows
                 grid.update()
@@ -318,8 +319,26 @@ class KgiSolution(InputWebSolution):
                 show_matrix(matrix)
                 ui.notify("Federation check complete")
 
+            def show_detail(event):
+                source, target = event.args["data"]["key"], event.args["colId"]
+                if target not in endpoints:
+                    return
+                source_ep, target_ep = endpoints[source], endpoints[target]
+                query = Endpoints.query("plain")
+                if target != source:
+                    query = Endpoints.query("federation")
+                    query = query.replace("TARGET", target_ep.endpoint)
+                error = event.args["data"].get(f"{target}_error")
+                detail.content = (
+                    f"source: {source} {source_ep.name} {source_ep.endpoint}\n"
+                    f"target: {target} {target_ep.name} {target_ep.endpoint}\n"
+                    f"{query}\n{error or 'ok'}"
+                )
+
             ui.button("Refresh", icon="refresh", on_click=refresh)
+            detail = ui.code("click a cell for its query and error", language="text")
             options = {"columnDefs": column_defs, "rowData": []}
             grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
+            grid.on("cellClicked", show_detail)
 
         await self.setup_content_div(show)
