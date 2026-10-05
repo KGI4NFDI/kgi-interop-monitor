@@ -28,7 +28,7 @@ class TestKgiWebserver(WebserverTest):
         paths = [getattr(route, "path", None) for route in self.ws.app.routes]
         if self.debug:
             print(paths)
-        for path in ["/", "/settings", "/about"]:
+        for path in ["/", "/federation", "/settings", "/about"]:
             self.assertIn(path, paths)
 
     def test_version(self):

@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple
 from lodstorage.query import Endpoint
 from lodstorage.sparql import SPARQL
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
-from nicegui import ui
+from nicegui import Client, run, ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
@@ -224,6 +224,10 @@ class KgiWebserver(InputWebserver):
         # measured states, cached on disk between runs
         self.update_state_cache = UpdateStateCache()
 
+        @ui.page("/federation")
+        async def federation(client: Client):
+            return await self.page(client, KgiSolution.federation)
+
 
 class KgiSolution(InputWebSolution):
     """
@@ -275,5 +279,41 @@ class KgiSolution(InputWebSolution):
         def show():
             self.endpoint_dashboard = KgiEndpointDashboard(self)
             self.endpoint_dashboard.setup_ui()
+
+        await self.setup_content_div(show)
+
+    async def federation(self):
+        """
+        The federation matrix: can the endpoint of the row call the endpoint
+        of the column via SERVICE?
+        """
+
+        def show():
+            endpoints = self.webserver.endpoints.get_endpoints()
+            column_defs = [{"headerName": "Source", "field": "name", "pinned": "left"}]
+            for key in endpoints:
+                column_defs.append({"headerName": key, "field": key, "width": 70})
+
+            def show_matrix(matrix: dict):
+                rows = []
+                for source, errors in matrix.items():
+                    row = {"name": f"{source} {endpoints[source].name}"}
+                    for target, error in errors.items():
+                        # the source itself does not answer / cannot call target
+                        failed = "🔴" if target == source else "🟡"
+                        row[target] = failed if error else "🟢"
+                    rows.append(row)
+                grid.options["rowData"] = rows
+                grid.update()
+
+            async def refresh():
+                ui.notify("Checking federation ...")
+                matrix = await run.io_bound(self.webserver.endpoints.check_federation)
+                show_matrix(matrix)
+                ui.notify("Federation check complete")
+
+            ui.button("Refresh", icon="refresh", on_click=refresh)
+            options = {"columnDefs": column_defs, "rowData": []}
+            grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
 
         await self.setup_content_div(show)
