@@ -10,7 +10,7 @@ from lodstorage.sparql import SPARQL
 from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor.cmd import KgiCmd
-from kgi_interop_monitor.nicekgi import KgiEndpointDashboard, KgiWebserver
+from kgi_interop_monitor.nicekgi import USER_AGENT, KgiEndpointDashboard, KgiWebserver
 
 
 class TestKgiWebserver(WebserverTest):
@@ -113,3 +113,16 @@ class TestKgiWebserver(WebserverTest):
             matrix = self.ws.endpoints.check_federation()
         for source, row in matrix.items():
             self.assertEqual({source: "OSError: down"}, row)
+
+    def test_user_agent(self):
+        """
+        test that the queries of the home page name this project, not
+        nicescholia
+        """
+        self.assertTrue(USER_AGENT.startswith("kgi-interop-monitor/"))
+        endpoints = self.ws.endpoints
+        endpoint = list(endpoints.get_endpoints().values())[0]
+        query = endpoints.triple_count_query_for_endpoint(endpoint)
+        with patch("kgi_interop_monitor.nicekgi.SPARQL") as sparql:
+            endpoints.runQuery(query)
+        sparql.assert_called_once_with(endpoint.endpoint, agent=USER_AGENT)

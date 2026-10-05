@@ -9,16 +9,15 @@ Created on 2026-09-29
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from lodstorage.query import Endpoint
+from lodstorage.query import Endpoint, Query
 from lodstorage.sparql import SPARQL
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
 from nicegui import Client, run, ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
-from nscholia.useragent import USER_AGENT
 
 import kgi_interop_monitor
 from kgi_interop_monitor.kgs import KnowledgeGraph, KnowledgeGraphs
@@ -45,6 +44,10 @@ class Version:
 {description}
 
   Created by {authors} on {date} last updated {updated}"""
+
+
+# sent with every query: who is asking and where to find out more
+USER_AGENT = f"kgi-interop-monitor/{Version.version} (+{Version.cm_url})"
 
 
 class Endpoints(ScholiaEndpoints):
@@ -123,6 +126,24 @@ class Endpoints(ScholiaEndpoints):
         path = Path(__file__).parent / "resources" / "queries" / f"{name}.rq"
         query = path.read_text()
         return query
+
+    def runQuery(self, query: Query) -> Optional[List[Dict[str, Any]]]:
+        """
+        nicescholia's runQuery, sent with the user agent of this project
+
+        Args:
+            query: the query to run
+
+        Returns:
+            the query result as list of dicts
+        """
+        endpoint = SPARQL(query.endpoint, agent=USER_AGENT)
+        if query.params.has_params:
+            query.apply_default_params()
+        qlod = endpoint.queryAsListOfDicts(
+            query.query, param_dict=query.params.params_dict
+        )
+        return qlod
 
     def check_federation(self) -> Dict[str, Dict[str, Optional[str]]]:
         """
