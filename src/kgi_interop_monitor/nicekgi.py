@@ -142,6 +142,7 @@ class Endpoints(ScholiaEndpoints):
         matrix = {}
         for source, source_ep in endpoints.items():
             sparql = SPARQL(source_ep.endpoint, agent=USER_AGENT)
+            sparql.sparql.setTimeout(20)
             matrix[source] = {}
             for target in [source] + [key for key in endpoints if key != source]:
                 query = plain_query
