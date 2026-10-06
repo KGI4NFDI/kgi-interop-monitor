@@ -351,7 +351,6 @@ class KgiSolution(InputWebSolution):
                     )
                 finally:
                     provider.checked_sources = None
-                ui.notify("Federation check complete")
 
             def show_progress():
                 checked = provider.checked_sources
