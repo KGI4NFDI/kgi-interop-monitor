@@ -68,6 +68,8 @@ class Endpoints(ScholiaEndpoints):
         """
         super().__init__()
         self.kgs = KnowledgeGraphs.of_yaml(yaml_path)
+        # sources done in the running federation check, None when none runs
+        self.checked_sources: Optional[int] = None
 
     @staticmethod
     def sort_key(item: Tuple[str, KnowledgeGraph]) -> Tuple[bool, str, str, str]:
@@ -160,6 +162,7 @@ class Endpoints(ScholiaEndpoints):
         endpoints = self.get_endpoints()
         plain_query = self.query("plain")
         federation_query = self.query("federation")
+        self.checked_sources = 0
         matrix = {}
         for source, source_ep in endpoints.items():
             sparql = SPARQL(source_ep.endpoint, agent=USER_AGENT)
@@ -178,6 +181,7 @@ class Endpoints(ScholiaEndpoints):
                 matrix[source][target] = error
                 if error and target == source:
                     break
+            self.checked_sources += 1
         return matrix
 
 
@@ -318,7 +322,8 @@ class KgiSolution(InputWebSolution):
         """
 
         def show():
-            endpoints = self.webserver.endpoints.get_endpoints()
+            provider = self.webserver.endpoints
+            endpoints = provider.get_endpoints()
             column_defs = [{"headerName": "Source", "field": "name", "pinned": "left"}]
             for key in endpoints:
                 column_defs.append({"headerName": key, "field": key, "width": 70})
@@ -337,13 +342,26 @@ class KgiSolution(InputWebSolution):
                 grid.update()
 
             async def refresh():
-                detail.content = "Checking federation ..."
-                self.webserver.federation = await run.io_bound(
-                    self.webserver.endpoints.check_federation
-                )
-                show_matrix()
-                detail.content = hint
+                if provider.checked_sources is not None:
+                    return
+                provider.checked_sources = 0
+                try:
+                    self.webserver.federation = await run.io_bound(
+                        provider.check_federation
+                    )
+                finally:
+                    provider.checked_sources = None
                 ui.notify("Federation check complete")
+
+            def show_progress():
+                checked = provider.checked_sources
+                if checked is not None:
+                    detail.content = (
+                        f"Checking federation ... {checked} of {len(endpoints)} sources"
+                    )
+                elif detail.content.startswith("Checking"):
+                    detail.content = hint
+                    show_matrix()
 
             def show_detail(event):
                 source, target = event.args["data"]["key"], event.args["colId"]
@@ -368,5 +386,6 @@ class KgiSolution(InputWebSolution):
             grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
             grid.on("cellClicked", show_detail)
             show_matrix()
+            ui.timer(1.0, show_progress)
 
         await self.setup_content_div(show)

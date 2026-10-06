@@ -101,6 +101,7 @@ class TestKgiWebserver(WebserverTest):
             "SERVICE <https://nfdi4culture.de/sparql>", str(ask.call_args_list)
         )
         self.assertEqual(list(endpoints), list(matrix))
+        self.assertEqual(len(endpoints), self.ws.endpoints.checked_sources)
         for source, row in matrix.items():
             self.assertEqual(len(endpoints), len(row))
             self.assertEqual({None}, set(row.values()))
