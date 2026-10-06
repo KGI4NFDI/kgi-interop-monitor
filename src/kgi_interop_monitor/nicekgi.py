@@ -141,9 +141,13 @@ class KgiEndpointDashboard(EndpointDashboard):
 
     def setup_ui(self):
         """
-        render nicescholia's dashboard and show the Consortium column
+        render nicescholia's dashboard, mark it as beta and show the Consortium
+        column
         """
         super().setup_ui()
+        for element in ui.context.client.elements.values():
+            if getattr(element, "text", None) == "Endpoint Monitor":
+                element.text = "Endpoint Monitor (Beta)"
         self.show_consortium(self.grid.ag_grid.options["columnDefs"])
         self.grid.update()
 
