@@ -337,11 +337,12 @@ class KgiSolution(InputWebSolution):
                 grid.update()
 
             async def refresh():
-                ui.notify("Checking federation ...")
+                detail.content = "Checking federation ..."
                 self.webserver.federation = await run.io_bound(
                     self.webserver.endpoints.check_federation
                 )
                 show_matrix()
+                detail.content = hint
                 ui.notify("Federation check complete")
 
             def show_detail(event):
@@ -361,7 +362,8 @@ class KgiSolution(InputWebSolution):
                 )
 
             ui.button("Refresh", icon="refresh", on_click=refresh)
-            detail = ui.code("click a cell for its query and error", language="text")
+            hint = "click a cell for its query and error"
+            detail = ui.code(hint, language="text")
             options = {"columnDefs": column_defs, "rowData": []}
             grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
             grid.on("cellClicked", show_detail)
