@@ -1,0 +1,115 @@
+name: Build and push image to registry
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: 'Force a rebuild of the Docker image without using cache.'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PUSH_IMAGE: ${{ github.event_name != 'pull_request' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Log in to the Container registry
+        if: env.PUSH_IMAGE == 'true'
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract SemVer Metadata
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set image tags
+        if: env.PUSH_IMAGE == 'true'
+        id: image-tags
+        run: |
+          echo "staging=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "release=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Check whether the commit image already exists
+        if: env.PUSH_IMAGE == 'true' && startsWith(github.ref, 'refs/tags/v')
+        id: commit-image
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_NAME,,}:${{ steps.image-tags.outputs.staging }}"
+
+          if docker buildx imagetools inspect "${IMAGE}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push the image
+        if: |
+          github.event_name == 'pull_request' ||
+          github.event_name == 'workflow_dispatch' ||
+          github.ref == 'refs/heads/main' ||
+          (env.PUSH_IMAGE == 'true' && startsWith(github.ref, 'refs/tags/v') && steps.commit-image.outputs.exists == 'false')
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          push: ${{ env.PUSH_IMAGE }}
+          load: ${{ env.PUSH_IMAGE == 'false' }}
+          no-cache: ${{ github.event.inputs.no_cache || false }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=kgi-interop-monitor
+          cache-to: type=gha,mode=max,scope=kgi-interop-monitor
+
+      - name: Promote the commit image for release
+        if: env.PUSH_IMAGE == 'true' && startsWith(github.ref, 'refs/tags/v') && steps.commit-image.outputs.exists == 'true'
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_NAME,,}"
+          SOURCE_TAG="${{ steps.image-tags.outputs.staging }}"
+          RELEASE_TAG="${{ steps.image-tags.outputs.release }}"
+
+          # Like metadata-action: also move major.minor and major, but not for pre-releases.
+          TAGS=("${RELEASE_TAG}")
+          if [[ "${RELEASE_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAGS+=("${RELEASE_TAG%.*}" "${RELEASE_TAG%%.*}")
+          fi
+
+          args=()
+          for tag in "${TAGS[@]}"; do
+            args+=(--tag "${IMAGE}:${tag}")
+          done
+          docker buildx imagetools create "${args[@]}" "${IMAGE}:${SOURCE_TAG}"
