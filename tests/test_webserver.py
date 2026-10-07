@@ -4,10 +4,13 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+from unittest.mock import patch
+
+from lodstorage.sparql import SPARQL
 from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor.cmd import KgiCmd
-from kgi_interop_monitor.nicekgi import KgiEndpointDashboard, KgiWebserver
+from kgi_interop_monitor.nicekgi import USER_AGENT, KgiEndpointDashboard, KgiWebserver
 
 
 class TestKgiWebserver(WebserverTest):
@@ -25,7 +28,7 @@ class TestKgiWebserver(WebserverTest):
         paths = [getattr(route, "path", None) for route in self.ws.app.routes]
         if self.debug:
             print(paths)
-        for path in ["/", "/settings", "/about"]:
+        for path in ["/", "/federation", "/settings", "/about"]:
             self.assertIn(path, paths)
 
     def test_version(self):
@@ -83,3 +86,44 @@ class TestKgiWebserver(WebserverTest):
         self.assertFalse(consortium["hide"])
         self.assertNotIn("rowGroup", consortium)
         self.assertEqual("name", column_defs[1]["field"])
+
+    def test_check_federation(self):
+        """
+        test that every ordered pair of endpoints is asked - no endpoint is
+        queried here
+        """
+        endpoints = self.ws.endpoints.get_endpoints()
+        with patch.object(
+            SPARQL, "queryAsListOfDicts", return_value=[{"ok": 1}]
+        ) as ask:
+            matrix = self.ws.endpoints.check_federation()
+        self.assertIn(
+            "SERVICE <https://nfdi4culture.de/sparql>", str(ask.call_args_list)
+        )
+        self.assertEqual(list(endpoints), list(matrix))
+        self.assertEqual(len(endpoints), self.ws.endpoints.checked_sources)
+        for source, row in matrix.items():
+            self.assertEqual(len(endpoints), len(row))
+            self.assertEqual({None}, set(row.values()))
+
+    def test_check_federation_source_down(self):
+        """
+        test that a source that fails the plain query is asked nothing else
+        """
+        with patch.object(SPARQL, "queryAsListOfDicts", side_effect=OSError("down")):
+            matrix = self.ws.endpoints.check_federation()
+        for source, row in matrix.items():
+            self.assertEqual({source: "OSError: down"}, row)
+
+    def test_user_agent(self):
+        """
+        test that the queries of the home page name this project, not
+        nicescholia
+        """
+        self.assertTrue(USER_AGENT.startswith("kgi-interop-monitor/"))
+        endpoints = self.ws.endpoints
+        endpoint = list(endpoints.get_endpoints().values())[0]
+        query = endpoints.triple_count_query_for_endpoint(endpoint)
+        with patch("kgi_interop_monitor.nicekgi.SPARQL") as sparql:
+            endpoints.runQuery(query)
+        sparql.assert_called_once_with(endpoint.endpoint, agent=USER_AGENT)

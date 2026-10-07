@@ -1,0 +1,3 @@
+SELECT * WHERE {
+  SERVICE <TARGET> { SELECT (1 AS ?ok) WHERE {} }
+}

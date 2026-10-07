@@ -8,11 +8,13 @@ Created on 2026-09-29
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from lodstorage.query import Endpoint
+from lodstorage.query import Endpoint, Query
+from lodstorage.sparql import SPARQL
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
-from nicegui import ui
+from nicegui import Client, run, ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
@@ -44,6 +46,10 @@ class Version:
   Created by {authors} on {date} last updated {updated}"""
 
 
+# sent with every query: who is asking and where to find out more
+USER_AGENT = f"kgi-interop-monitor/{Version.version} (+{Version.cm_url})"
+
+
 class Endpoints(ScholiaEndpoints):
     """
     the KGI4NFDI registry endpoints; nicescholia's Endpoints supplies the
@@ -62,6 +68,8 @@ class Endpoints(ScholiaEndpoints):
         """
         super().__init__()
         self.kgs = KnowledgeGraphs.of_yaml(yaml_path)
+        # sources done in the running federation check, None when none runs
+        self.checked_sources: Optional[int] = None
 
     @staticmethod
     def sort_key(item: Tuple[str, KnowledgeGraph]) -> Tuple[bool, str, str, str]:
@@ -105,6 +113,76 @@ class Endpoints(ScholiaEndpoints):
             endpoint.group = kg.consortium or self.NO_CONSORTIUM
             endpoints[key] = endpoint
         return endpoints
+
+    @classmethod
+    def query(cls, name: str) -> str:
+        """
+        the SPARQL query of the given name
+
+        Args:
+            name: the file name in resources/queries, without .rq
+
+        Returns:
+            the query text
+        """
+        path = Path(__file__).parent / "resources" / "queries" / f"{name}.rq"
+        query = path.read_text()
+        return query
+
+    def runQuery(self, query: Query) -> Optional[List[Dict[str, Any]]]:
+        """
+        nicescholia's runQuery, sent with the user agent of this project
+
+        Args:
+            query: the query to run
+
+        Returns:
+            the query result as list of dicts
+        """
+        endpoint = SPARQL(query.endpoint, agent=USER_AGENT)
+        if query.params.has_params:
+            query.apply_default_params()
+        qlod = endpoint.queryAsListOfDicts(
+            query.query, param_dict=query.params.params_dict
+        )
+        return qlod
+
+    def check_federation(self) -> Dict[str, Dict[str, Optional[str]]]:
+        """
+        send the federated test query for every ordered pair of endpoints
+
+        Each source is asked the plain query first; when that fails, its
+        federated queries are not sent.
+
+        Returns:
+            by registry id of the source, then of the target: None when the
+            source could call the target, else the error - under its own id
+            the outcome of the plain query
+        """
+        endpoints = self.get_endpoints()
+        plain_query = self.query("plain")
+        federation_query = self.query("federation")
+        self.checked_sources = 0
+        matrix = {}
+        for source, source_ep in endpoints.items():
+            sparql = SPARQL(source_ep.endpoint, agent=USER_AGENT)
+            sparql.sparql.setTimeout(20)
+            matrix[source] = {}
+            for target in [source] + [key for key in endpoints if key != source]:
+                query = plain_query
+                if target != source:
+                    target_url = endpoints[target].endpoint
+                    query = federation_query.replace("TARGET", target_url)
+                try:
+                    qlod = sparql.queryAsListOfDicts(query)
+                    error = None if qlod else "empty result"
+                except Exception as ex:
+                    error = f"{type(ex).__name__}: {ex}"
+                matrix[source][target] = error
+                if error and target == source:
+                    break
+            self.checked_sources += 1
+        return matrix
 
 
 class KgiEndpointDashboard(EndpointDashboard):
@@ -174,6 +252,12 @@ class KgiWebserver(InputWebserver):
         self.endpoints = Endpoints()
         # measured states, cached on disk between runs
         self.update_state_cache = UpdateStateCache()
+        # the last federation check, kept in memory only
+        self.federation = {}
+
+        @ui.page("/federation")
+        async def federation(client: Client):
+            return await self.page(client, KgiSolution.federation)
 
 
 class KgiSolution(InputWebSolution):
@@ -207,6 +291,12 @@ class KgiSolution(InputWebSolution):
             link_btn = super().link_button(name, target, icon_name, new_tab=new_tab)
         return link_btn
 
+    def configure_menu(self):
+        """
+        add the federation matrix page to the menu
+        """
+        self.link_button("federation", "/federation", "grid_on", new_tab=False)
+
     async def setup_footer(self, *args, **kwargs):
         """
         the footer: a link to nicescholia
@@ -226,5 +316,79 @@ class KgiSolution(InputWebSolution):
         def show():
             self.endpoint_dashboard = KgiEndpointDashboard(self)
             self.endpoint_dashboard.setup_ui()
+
+        await self.setup_content_div(show)
+
+    async def federation(self):
+        """
+        The federation matrix: can the endpoint of the row call the endpoint
+        of the column via SERVICE?
+        """
+
+        def show():
+            provider = self.webserver.endpoints
+            endpoints = provider.get_endpoints()
+            column_defs = [{"headerName": "Source", "field": "name", "pinned": "left"}]
+            for key in endpoints:
+                column_defs.append({"headerName": key, "field": key, "width": 70})
+
+            def show_matrix():
+                rows = []
+                for source, errors in self.webserver.federation.items():
+                    row = {"key": source, "name": f"{source} {endpoints[source].name}"}
+                    for target, error in errors.items():
+                        # the source itself does not answer / cannot call target
+                        failed = "🔴" if target == source else "🟡"
+                        row[target] = failed if error else "🟢"
+                        row[f"{target}_error"] = error
+                    rows.append(row)
+                grid.options["rowData"] = rows
+                grid.update()
+
+            async def refresh():
+                if provider.checked_sources is not None:
+                    return
+                provider.checked_sources = 0
+                try:
+                    self.webserver.federation = await run.io_bound(
+                        provider.check_federation
+                    )
+                finally:
+                    provider.checked_sources = None
+
+            def show_progress():
+                checked = provider.checked_sources
+                if checked is not None:
+                    detail.content = (
+                        f"Checking federation ... {checked} of {len(endpoints)} sources"
+                    )
+                elif detail.content.startswith("Checking"):
+                    detail.content = hint
+                    show_matrix()
+
+            def show_detail(event):
+                source, target = event.args["data"]["key"], event.args["colId"]
+                if target not in endpoints:
+                    return
+                source_ep, target_ep = endpoints[source], endpoints[target]
+                query = Endpoints.query("plain")
+                if target != source:
+                    query = Endpoints.query("federation")
+                    query = query.replace("TARGET", target_ep.endpoint)
+                error = event.args["data"].get(f"{target}_error")
+                detail.content = (
+                    f"source: {source} {source_ep.name} {source_ep.endpoint}\n"
+                    f"target: {target} {target_ep.name} {target_ep.endpoint}\n"
+                    f"{query}\n{error or 'ok'}"
+                )
+
+            ui.button("Refresh", icon="refresh", on_click=refresh)
+            hint = "click a cell for its query and error"
+            detail = ui.code(hint, language="text")
+            options = {"columnDefs": column_defs, "rowData": []}
+            grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
+            grid.on("cellClicked", show_detail)
+            show_matrix()
+            ui.timer(1.0, show_progress)
 
         await self.setup_content_div(show)
