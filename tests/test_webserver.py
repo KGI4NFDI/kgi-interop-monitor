@@ -136,6 +136,63 @@ class TestKgiWebserver(WebserverTest):
         for source, row in matrix.items():
             self.assertEqual({source: "OSError: down"}, row)
 
+    def test_get_registry_metadata(self):
+        """
+        test the registration form fields of the live registry: every
+        knowledge graph has a name and only the fields of the form
+        """
+        metadata = self.ws.endpoints.get_registry_metadata()
+        if self.debug:
+            print(f"{len(metadata)} knowledge graphs")
+        self.assertTrue(len(metadata) > 0)
+        for key, fields in metadata.items():
+            self.assertRegex(key, r"^KGR\d+$")
+            self.assertTrue(fields.get("name"), key)
+            self.assertLessEqual(set(fields), set(self.ws.endpoints.REGISTRY_FIELDS))
+        culture = metadata["KGR7"]
+        self.assertEqual(["Culture Knowledge Graph"], culture["name"])
+        self.assertEqual(["https://nfdi4culture.de/sparql"], culture["endpoint"])
+
+    def test_registry_id_fails_loudly(self):
+        """
+        test that a registry record without a KGR<number> id stops the
+        registry query with an error that names the record - no query sent
+        """
+        rows = [
+            {
+                "kg": "http://kgi.services.base4nfdi.de/entity/KGR7",
+                "field": "name",
+                "value": "a",
+            },
+            {
+                "kg": "http://kgi.services.base4nfdi.de/entity/X1",
+                "field": "name",
+                "value": "b",
+            },
+        ]
+        with patch.object(SPARQL, "queryAsListOfDicts", return_value=rows):
+            with self.assertRaisesRegex(ValueError, "entity/X1 has no KGR<number> id"):
+                self.ws.endpoints.get_registry_metadata()
+
+    def test_get_wikidata_labels(self):
+        """
+        test that the Wikidata items among the metadata values get their
+        English label and nothing else is sent to Wikidata
+        """
+        metadata = {
+            "KGR7": {
+                "name": ["Culture Knowledge Graph"],
+                "consortium": ["http://www.wikidata.org/entity/Q98276929"],
+            }
+        }
+        labels = self.ws.endpoints.get_wikidata_labels(metadata)
+        if self.debug:
+            print(labels)
+        self.assertEqual(
+            {"http://www.wikidata.org/entity/Q98276929": "NFDI4Culture"}, labels
+        )
+        self.assertEqual({}, self.ws.endpoints.get_wikidata_labels({}))
+
     def test_user_agent(self):
         """
         test that the queries of the home page name this project, not

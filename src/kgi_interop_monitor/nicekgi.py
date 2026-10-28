@@ -8,6 +8,7 @@ Created on 2026-09-29
 """
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -67,6 +68,9 @@ class Version:
 
 # sent with every query: who is asking and where to find out more
 USER_AGENT = f"kgi-interop-monitor/{Version.version} (+{Version.cm_url})"
+# the registry refers to consortia, institutions and contacts by Wikidata item
+WIKIDATA_ENTITY = "http://www.wikidata.org/entity/"
+WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
 
 
 class Endpoints(ScholiaEndpoints):
@@ -77,6 +81,22 @@ class Endpoints(ScholiaEndpoints):
 
     # consortium shown for the knowledge graphs whose registry record names none
     NO_CONSORTIUM = "(no consortium in the registry)"
+    # the id of a registry record: KGR and its number
+    REGISTRY_ID = re.compile(r"KGR\d+")
+    # the fields of the registration form as resources/queries/registry.rq
+    # names them, with their column header
+    REGISTRY_FIELDS = {
+        "name": "Name",
+        "endpoint": "SPARQL endpoint",
+        "website": "Website",
+        "description": "Description",
+        "consortium": "Consortium",
+        "institution": "Institution",
+        "contact": "Contact point",
+        "ontologies": "Ontologies",
+        "api": "API",
+        "dumps": "Dumps",
+    }
 
     def __init__(self, yaml_path: Optional[str] = None):
         """
@@ -202,6 +222,70 @@ class Endpoints(ScholiaEndpoints):
                     break
             self.checked_sources += 1
         return matrix
+
+    def get_registry_metadata(self) -> Dict[str, Dict[str, List[str]]]:
+        """
+        query the live registry for the registration form fields of every
+        registered knowledge graph
+
+        Returns:
+            by registry id, sorted by its number: the values of each field
+            that has any
+
+        Raises:
+            ValueError: if a record's id is not KGR and a number - the page
+                sorts and links the records by it
+        """
+        sparql = SPARQL(self.kgs.source, agent=USER_AGENT)
+        qlod = sparql.queryAsListOfDicts(self.query("registry"))
+        metadata = {}
+        for record in qlod:
+            key = record["kg"].rsplit("/", 1)[-1]
+            if not self.REGISTRY_ID.fullmatch(key):
+                raise ValueError(
+                    f"registry record {record['kg']} has no KGR<number> id"
+                )
+            values = metadata.setdefault(key, {}).setdefault(record["field"], [])
+            values.append(str(record["value"]))
+        for fields in metadata.values():
+            for values in fields.values():
+                values.sort()
+        metadata = dict(
+            sorted(metadata.items(), key=lambda item: int(item[0][len("KGR") :]))
+        )
+        return metadata
+
+    def get_wikidata_labels(
+        self, metadata: Dict[str, Dict[str, List[str]]]
+    ) -> Dict[str, str]:
+        """
+        ask Wikidata for the English labels of the Wikidata items among the
+        registry metadata values
+
+        Args:
+            metadata: the registry metadata as get_registry_metadata returns it
+
+        Returns:
+            mapping of item IRI to English label - items without one are missing
+        """
+        items = sorted(
+            {
+                value
+                for fields in metadata.values()
+                for values in fields.values()
+                for value in values
+                if value.startswith(WIKIDATA_ENTITY)
+            }
+        )
+        labels = {}
+        if items:
+            query = self.query("labels").replace(
+                "ITEMS", " ".join(f"<{item}>" for item in items)
+            )
+            sparql = SPARQL(WIKIDATA_ENDPOINT, agent=USER_AGENT)
+            for record in sparql.queryAsListOfDicts(query):
+                labels[str(record["item"])] = str(record["label"])
+        return labels
 
 
 class KgiEndpointDashboard(EndpointDashboard):
