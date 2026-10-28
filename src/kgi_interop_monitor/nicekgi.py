@@ -8,6 +8,7 @@ Created on 2026-09-29
 """
 
 import html
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -397,7 +398,7 @@ class KgiSolution(InputWebSolution):
     # the intro of the registry page, one line each: what it is for, what to do
     REGISTRY_INTRO = (
         "Is the registry metadata of your knowledge graph up to date?",
-        "1. Review the metadata of your knowledge graph.",
+        "1. Unfold your knowledge graph and review its metadata.",
         "2. Open its GitHub update issue - it comes filled with the registered values.",
         "3. Correct or complete the values in the issue before you submit it.",
     )
@@ -405,8 +406,36 @@ class KgiSolution(InputWebSolution):
     HEADER_COLOR = "#e8eaf6"
     # the space in px above the registry table: menu, intro and buttons
     TABLE_TOP = 250
-    # the registry table: small text, tight rows, links on one line
-    REGISTRY_CSS = """
+    # folding by knowledge graph: the keys of the folded ones live in the
+    # browser, so folding needs no round trip and keeps the scroll position
+    # - until the first fold there is no set and every knowledge graph is
+    # folded, so the page opens folded without waiting for the browser
+    FOLD_FILTER = (
+        "node => node.data.kind === 'kg'"
+        " || (window.kgiCollapsed ? !window.kgiCollapsed.has(node.data.key) : false)"
+    )
+    FOLD_ROW_CLASS = (
+        "params => params.data.kind !== 'kg' ? '' : 'kgi-kg'"
+        " + (!window.kgiCollapsed || window.kgiCollapsed.has(params.data.key)"
+        " ? ' kgi-collapsed' : '')"
+    )
+    # a click on a header row, but not on its link, folds or unfolds it
+    FOLD_CLICK = (
+        "params => {"
+        " if (params.data.kind !== 'kg' || params.event.target.closest('a')) return;"
+        " if (!window.kgiCollapsed) {"
+        " window.kgiCollapsed = new Set();"
+        " params.api.forEachNode(node => node.data.kind === 'kg'"
+        " && window.kgiCollapsed.add(node.data.key)); }"
+        " const collapsed = window.kgiCollapsed;"
+        " const key = params.data.key;"
+        " collapsed.has(key) ? collapsed.delete(key) : collapsed.add(key);"
+        " params.api.onFilterChanged();"
+        " params.api.redrawRows({rowNodes: [params.node]}); }"
+    )
+    # the registry table: small text, tight rows, links on one line, a fold
+    # marker on the header rows
+    REGISTRY_CSS = r"""
 .kgi-registry {
   --ag-font-size: 12px;
   --ag-header-height: 26px;
@@ -422,6 +451,15 @@ class KgiSolution(InputWebSolution):
 }
 .kgi-registry .kgi-issue {
   text-decoration: underline;
+}
+.kgi-registry .kgi-kg {
+  cursor: pointer;
+}
+.kgi-registry .kgi-toggle::before {
+  content: "\25BE\00a0";
+}
+.kgi-registry .kgi-collapsed .kgi-toggle::before {
+  content: "\25B8\00a0";
 }
 """
 
@@ -659,11 +697,12 @@ class KgiSolution(InputWebSolution):
             the rows
         """
         name = (fields.get("name") or [""])[0]
+        title = f'<span class="kgi-toggle"></span><b>{html.escape(key)}</b>'
         rows = [
             {
                 "kind": "kg",
                 "key": key,
-                "property": f"<b>{html.escape(key)}</b>",
+                "property": title,
                 "registered": f"<b>{html.escape(name)}</b>",
                 "action": cls.form_link(key, fields, labels),
             }
@@ -741,11 +780,26 @@ class KgiSolution(InputWebSolution):
                 grid.update()
                 status.text = f"{len(metadata)} knowledge graphs registered"
 
+            def fold(collapse: bool):
+                keys = []
+                if collapse:
+                    rows = grid.options["rowData"]
+                    keys = [row["key"] for row in rows if row["kind"] == "kg"]
+                ui.run_javascript(f"window.kgiCollapsed = new Set({json.dumps(keys)})")
+                grid.run_grid_method("onFilterChanged")
+                grid.run_grid_method("redrawRows")
+
             with ui.column().classes("w-full gap-3 pb-3"):
                 # titled like nicescholia's Endpoint Monitor
                 with ui.row().classes("items-center"):
                     ui.label("Metadata Monitor (Beta)").classes("text-2xl font-bold")
                     ui.button("Refresh", icon="refresh", on_click=refresh)
+                    ui.button(
+                        "Collapse all", icon="unfold_less", on_click=lambda: fold(True)
+                    )
+                    ui.button(
+                        "Expand all", icon="unfold_more", on_click=lambda: fold(False)
+                    )
                     status = ui.label()
                 with ui.column().classes("gap-0"):
                     for line in self.REGISTRY_INTRO:
@@ -757,6 +811,11 @@ class KgiSolution(InputWebSolution):
                 "defaultColDef": {"wrapText": True, "autoHeight": True},
                 ":getRowStyle": "params => params.data.kind === 'kg' ? "
                 f"{{background: '{self.HEADER_COLOR}'}} : null",
+                # a header row folds the rows of its knowledge graph
+                ":isExternalFilterPresent": "() => true",
+                ":doesExternalFilterPass": self.FOLD_FILTER,
+                ":getRowClass": self.FOLD_ROW_CLASS,
+                ":onCellClicked": self.FOLD_CLICK,
                 "rowData": [],
             }
             grid = ui.aggrid(

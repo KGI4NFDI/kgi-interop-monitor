@@ -235,7 +235,9 @@ class TestKgiWebserver(WebserverTest):
                 print(row)
         header = rows[0]
         self.assertEqual("kg", header["kind"])
-        self.assertEqual("<b>KGR43</b>", header["property"])
+        self.assertEqual(
+            '<span class="kgi-toggle"></span><b>KGR43</b>', header["property"]
+        )
         self.assertEqual("<b>ORKG</b>", header["registered"])
         self.assertTrue(header["action"].startswith('<b>(<a class="kgi-issue"'))
         self.assertIn(RegistrationForm.NEW_ISSUE_URL, header["action"])
