@@ -38,6 +38,14 @@ class TestKnowledgeGraphs(Basetest):
         self.assertEqual("https://nfdi4culture.de/sparql", kg.endpoint)
         self.assertTrue(kg.endpoint_is_url)
 
+    def test_utf8(self):
+        """
+        test that non-ASCII names read as they are, whatever the platform
+        encoding - not as AktienfÃ¼hrer
+        """
+        kg = KnowledgeGraphs.of_yaml().kgs["KGR1"]
+        self.assertEqual("Aktienführer Knowledge Graph", kg.name)
+
     def test_prose_is_no_url(self):
         """
         test that a prose endpoint value is recognized as such
