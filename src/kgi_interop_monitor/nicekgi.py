@@ -220,7 +220,8 @@ class KgiEndpointDashboard(EndpointDashboard):
     def setup_ui(self):
         """
         render nicescholia's dashboard, mark it as beta and show the Consortium
-        column
+        column - and start the check right away when there are no current
+        measurements, instead of waiting for a click on Refresh
         """
         super().setup_ui()
         for element in ui.context.client.elements.values():
@@ -228,6 +229,9 @@ class KgiEndpointDashboard(EndpointDashboard):
                 element.text = "Endpoint Monitor (Beta)"
         self.show_consortium(self.grid.ag_grid.options["columnDefs"])
         self.grid.update()
+        # never measured, or longer ago than nicescholia's daily refresh
+        if self.update_state_cache.is_stale:
+            ui.timer(0.1, self.check_all, once=True)
 
 
 class KgiWebserver(InputWebserver):
