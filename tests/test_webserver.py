@@ -13,7 +13,13 @@ from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor import nicekgi
 from kgi_interop_monitor.cmd import KgiCmd
-from kgi_interop_monitor.nicekgi import USER_AGENT, KgiEndpointDashboard, KgiWebserver
+from kgi_interop_monitor.nicekgi import (
+    USER_AGENT,
+    KgiEndpointDashboard,
+    KgiSolution,
+    KgiWebserver,
+)
+from kgi_interop_monitor.registration import RegistrationForm
 
 
 class TestKgiWebserver(WebserverTest):
@@ -31,7 +37,7 @@ class TestKgiWebserver(WebserverTest):
         paths = [getattr(route, "path", None) for route in self.ws.app.routes]
         if self.debug:
             print(paths)
-        for path in ["/", "/federation", "/settings", "/about"]:
+        for path in ["/", "/endpoints", "/federation", "/settings", "/about"]:
             self.assertIn(path, paths)
 
     def test_version(self):
@@ -192,6 +198,58 @@ class TestKgiWebserver(WebserverTest):
             {"http://www.wikidata.org/entity/Q98276929": "NFDI4Culture"}, labels
         )
         self.assertEqual({}, self.ws.endpoints.get_wikidata_labels({}))
+
+    def test_registry_cell(self):
+        """
+        test that Wikidata items show their label, URLs are links with the URL
+        as title and prose is shown as registered
+        """
+        item = "http://www.wikidata.org/entity/Q98276929"
+        labels = {item: "NFDI4Culture"}
+        url = "https://nfdi4culture.de/sparql"
+        for value, expected in [
+            (item, f'<a href="{item}" target="_blank" title="{item}">NFDI4Culture</a>'),
+            (
+                "http://www.wikidata.org/entity/Q1",
+                '<a href="http://www.wikidata.org/entity/Q1" target="_blank"'
+                ' title="http://www.wikidata.org/entity/Q1">Q1</a>',
+            ),
+            (url, f'<a href="{url}" target="_blank" title="{url}">{url}</a>'),
+            ("work in progress", "work in progress"),
+            ("https://a.org; https://b.org", "https://a.org; https://b.org"),
+            ("<b>", "&lt;b&gt;"),
+        ]:
+            self.assertEqual(expected, KgiSolution.registry_cell(value, labels))
+
+    def test_registry_rows(self):
+        """
+        test the rows of one knowledge graph: a header with its id, its name
+        and the issue link under Action, then one row per property with the
+        registered values - missing labelled - and no action
+        """
+        properties = {"name": "Name", "endpoint": "SPARQL endpoint", "api": "API"}
+        registered = {"name": ["ORKG"], "endpoint": ["https://a.org; https://b.org"]}
+        rows = KgiSolution.registry_rows("KGR43", registered, {}, properties)
+        if self.debug:
+            for row in rows:
+                print(row)
+        header = rows[0]
+        self.assertEqual("kg", header["kind"])
+        self.assertEqual("<b>KGR43</b>", header["property"])
+        self.assertEqual("<b>ORKG</b>", header["registered"])
+        self.assertTrue(header["action"].startswith('<b>(<a class="kgi-issue"'))
+        self.assertIn(RegistrationForm.NEW_ISSUE_URL, header["action"])
+        self.assertIn(">Open GitHub update issue</a>)</b>", header["action"])
+        by_property = {row["property"]: row for row in rows[1:]}
+        self.assertEqual(list(properties.values()), list(by_property))
+        self.assertEqual("ORKG", by_property["Name"]["registered"])
+        self.assertEqual(
+            "https://a.org; https://b.org",
+            by_property["SPARQL endpoint"]["registered"],
+        )
+        self.assertEqual("<i>missing</i>", by_property["API"]["registered"])
+        for row in rows[1:]:
+            self.assertEqual("", row["action"])
 
     def test_user_agent(self):
         """
