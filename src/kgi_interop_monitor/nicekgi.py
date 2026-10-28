@@ -269,6 +269,8 @@ class KgiSolution(InputWebSolution):
     HIDDEN_BUTTONS = ("settings", "github", "help")
     # menu buttons of the ngwidgets default menu shown under another name
     RENAMED_BUTTONS = {"chat": "feedback"}
+    # the height of the footer banner in px
+    FOOTER_HEIGHT = 22
 
     def link_button(
         self, name: str, target: str, icon_name: str, new_tab: bool = True
@@ -303,10 +305,12 @@ class KgiSolution(InputWebSolution):
         """
         await super().setup_footer(*args, **kwargs)
         self.footer.clear()
+        # a thin banner, so it covers little of the page behind it
+        self.footer.style(f"padding: 2px 16px; height: {self.FOOTER_HEIGHT}px")
         with self.footer:
             ui.link(
                 "Powered by nicescholia", "https://github.com/WolfgangFahl/nicescholia"
-            ).style("color: #fff")
+            ).style("color: #fff; font-size: 12px; line-height: 18px")
 
     async def home(self):
         """
