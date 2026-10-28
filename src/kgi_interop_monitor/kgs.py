@@ -75,5 +75,7 @@ class KnowledgeGraphs:
         """
         if yaml_path is None:
             yaml_path = cls.default_path()
-        kgs = cls.load_from_yaml_file(str(yaml_path))
+        # explicitly UTF-8 - load_from_yaml_file uses the platform encoding
+        with open(yaml_path, encoding="utf-8") as stream:
+            kgs = cls.load_from_yaml_stream(stream)
         return kgs
