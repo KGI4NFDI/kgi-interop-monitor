@@ -92,6 +92,8 @@ jobs:
           no-cache: ${{ github.event.inputs.no_cache || false }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            KGI_BUILT_AT=${{ github.event.head_commit.timestamp || github.run_started_at }}
           cache-from: type=gha,scope=kgi-interop-monitor
           cache-to: type=gha,mode=max,scope=kgi-interop-monitor
 

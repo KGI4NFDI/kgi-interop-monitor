@@ -7,6 +7,7 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,6 +24,22 @@ import kgi_interop_monitor
 from kgi_interop_monitor.kgs import KnowledgeGraph, KnowledgeGraphs
 
 
+def build_date(default: str) -> str:
+    """
+    the date the image build passes in as KGI_BUILT_AT - the commit date on
+    main, the start of the build for a manual run
+
+    Args:
+        default: the date to show outside an image
+
+    Returns:
+        the date as YYYY-MM-DD
+    """
+    built_at = os.environ.get("KGI_BUILT_AT", "")
+    date = built_at[:10] or default
+    return date
+
+
 @dataclass
 class Version:
     """
@@ -33,7 +50,8 @@ class Version:
     name = "KGI Monitor (Beta)"
     version = kgi_interop_monitor.__version__
     date = "2026-09-29"
-    updated = "2026-09-29"
+    # the About page shows it as "updated"
+    updated = build_date("2026-09-29")
     description = "nicescholia dashboard for the KGI4NFDI registry endpoints"
     authors = ""
     doc_url = "https://github.com/KGI4NFDI/kgi-interop-monitor"
