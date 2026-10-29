@@ -399,7 +399,7 @@ class KgiSolution(InputWebSolution):
     REGISTRY_INTRO = (
         "Is the registry metadata of your knowledge graph up to date?",
         "1. Unfold your knowledge graph and review its metadata.",
-        "2. Open its GitHub update issue - it comes filled with the registered values.",
+        "2. Open its GitHub update issue, which comes filled with the registered values.",
         "3. Correct or complete the values in the issue before you submit it.",
     )
     # background of the header row of a knowledge graph
