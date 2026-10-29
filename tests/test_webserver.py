@@ -4,11 +4,13 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+from pathlib import Path
 from unittest.mock import patch
 
 from lodstorage.sparql import SPARQL
 from ngwidgets.webserver_test import WebserverTest
 
+from kgi_interop_monitor import nicekgi
 from kgi_interop_monitor.cmd import KgiCmd
 from kgi_interop_monitor.nicekgi import USER_AGENT, KgiEndpointDashboard, KgiWebserver
 
@@ -38,8 +40,16 @@ class TestKgiWebserver(WebserverTest):
         version = self.ws.config.version
         if self.debug:
             print(version.longDescription)
-        self.assertEqual("nicekgi", version.name)
+        self.assertEqual("KGI Monitor (Beta)", version.name)
+        self.assertEqual("kgi-monitor", self.ws.config.short_name)
         self.assertTrue(version.version)
+
+    def test_logo(self):
+        """
+        test that the KGI4NFDI logo of the menu banner ships with the package
+        """
+        logo = Path(nicekgi.__file__).parent / "resources" / "kgi4nfdi_logo.png"
+        self.assertEqual(b"PNG", logo.read_bytes()[1:4])
 
     def test_endpoints(self):
         """

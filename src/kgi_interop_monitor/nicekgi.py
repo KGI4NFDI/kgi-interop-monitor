@@ -29,7 +29,8 @@ class Version:
     Version handling for nicekgi
     """
 
-    name = "nicekgi"
+    # the page title and the name in the menu banner of every page
+    name = "KGI Monitor (Beta)"
     version = kgi_interop_monitor.__version__
     date = "2026-09-29"
     updated = "2026-09-29"
@@ -242,7 +243,7 @@ class KgiWebserver(InputWebserver):
     @classmethod
     def get_config(cls) -> WebserverConfig:
         config = WebserverConfig(
-            short_name="nicekgi",
+            short_name="kgi-monitor",
             timeout=6.0,
             version=Version(),
             default_port=9001,
@@ -296,6 +297,26 @@ class KgiSolution(InputWebSolution):
             name = self.RENAMED_BUTTONS.get(name, name)
             link_btn = super().link_button(name, target, icon_name, new_tab=new_tab)
         return link_btn
+
+    def setup_menu(self, detailed: Optional[bool] = None):
+        """
+        ngwidgets' menu banner, with the tool's name and the KGI4NFDI logo at
+        its right - the banner is on every page
+
+        Args:
+            detailed: if True add github, chat and help links
+        """
+        super().setup_menu(detailed)
+        logo = Path(__file__).parent / "resources" / "kgi4nfdi_logo.png"
+        kgi4nfdi_url = "https://base4nfdi.de/projects/kgi4nfdi"
+        # name and logo stay together, at the right also when the menu wraps
+        with self.header.classes("items-center"):
+            with ui.row().classes("ml-auto items-center no-wrap"):
+                ui.label(self.config.version.name).classes("text-h6")
+                with ui.link(target=kgi4nfdi_url, new_tab=True):
+                    ui.image(logo).props("fit=contain").style(
+                        "height: 36px; width: 148px"
+                    )
 
     def configure_menu(self):
         """
@@ -390,7 +411,10 @@ class KgiSolution(InputWebSolution):
                     f"{query}\n{error or 'ok'}"
                 )
 
-            ui.button("Refresh", icon="refresh", on_click=refresh)
+            # titled like nicescholia's Endpoint Monitor
+            with ui.row().classes("w-full items-center mb-4"):
+                ui.label("Federation Monitor (Beta)").classes("text-2xl font-bold")
+                ui.button("Refresh", icon="refresh", on_click=refresh)
             hint = "click a cell for its query and error"
             detail = ui.code(hint, language="text")
             options = {"columnDefs": column_defs, "rowData": []}
