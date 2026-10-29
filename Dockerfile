@@ -30,6 +30,10 @@ RUN mkdir .nicescholia
 
 ENV PYTHONUNBUFFERED=1
 
+# when the code was built, for the About page
+ARG KGI_BUILT_AT=""
+ENV KGI_BUILT_AT=${KGI_BUILT_AT}
+
 EXPOSE 9001
 
 # listen on all interfaces, not only the container's localhost

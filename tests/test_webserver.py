@@ -4,6 +4,7 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -43,6 +44,16 @@ class TestKgiWebserver(WebserverTest):
         self.assertEqual("KGI Monitor (Beta)", version.name)
         self.assertEqual("kgi-monitor", self.ws.config.short_name)
         self.assertTrue(version.version)
+
+    def test_build_date(self):
+        """
+        test that the updated date is the date the image build passes in, and
+        the given default outside an image
+        """
+        with patch.dict(os.environ, {"KGI_BUILT_AT": "2026-10-29T11:46:39Z"}):
+            self.assertEqual("2026-10-29", nicekgi.build_date("2026-09-29"))
+        with patch.dict(os.environ, {"KGI_BUILT_AT": ""}):
+            self.assertEqual("2026-09-29", nicekgi.build_date("2026-09-29"))
 
     def test_logo(self):
         """
