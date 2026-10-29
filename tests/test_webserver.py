@@ -13,7 +13,13 @@ from ngwidgets.webserver_test import WebserverTest
 
 from kgi_interop_monitor import nicekgi
 from kgi_interop_monitor.cmd import KgiCmd
-from kgi_interop_monitor.nicekgi import USER_AGENT, KgiEndpointDashboard, KgiWebserver
+from kgi_interop_monitor.nicekgi import (
+    USER_AGENT,
+    KgiEndpointDashboard,
+    KgiSolution,
+    KgiWebserver,
+)
+from kgi_interop_monitor.registration import RegistrationForm
 
 
 class TestKgiWebserver(WebserverTest):
@@ -31,7 +37,7 @@ class TestKgiWebserver(WebserverTest):
         paths = [getattr(route, "path", None) for route in self.ws.app.routes]
         if self.debug:
             print(paths)
-        for path in ["/", "/federation", "/settings", "/about"]:
+        for path in ["/", "/endpoints", "/federation", "/settings", "/about"]:
             self.assertIn(path, paths)
 
     def test_version(self):
@@ -135,6 +141,117 @@ class TestKgiWebserver(WebserverTest):
             matrix = self.ws.endpoints.check_federation()
         for source, row in matrix.items():
             self.assertEqual({source: "OSError: down"}, row)
+
+    def test_get_registry_metadata(self):
+        """
+        test the registration form fields of the live registry: every
+        knowledge graph has a name and only the fields of the form
+        """
+        metadata = self.ws.endpoints.get_registry_metadata()
+        if self.debug:
+            print(f"{len(metadata)} knowledge graphs")
+        self.assertTrue(len(metadata) > 0)
+        for key, fields in metadata.items():
+            self.assertRegex(key, r"^KGR\d+$")
+            self.assertTrue(fields.get("name"), key)
+            self.assertLessEqual(set(fields), set(self.ws.endpoints.REGISTRY_FIELDS))
+        culture = metadata["KGR7"]
+        self.assertEqual(["Culture Knowledge Graph"], culture["name"])
+        self.assertEqual(["https://nfdi4culture.de/sparql"], culture["endpoint"])
+
+    def test_registry_id_fails_loudly(self):
+        """
+        test that a registry record without a KGR<number> id stops the
+        registry query with an error that names the record - no query sent
+        """
+        rows = [
+            {
+                "kg": "http://kgi.services.base4nfdi.de/entity/KGR7",
+                "field": "name",
+                "value": "a",
+            },
+            {
+                "kg": "http://kgi.services.base4nfdi.de/entity/X1",
+                "field": "name",
+                "value": "b",
+            },
+        ]
+        with patch.object(SPARQL, "queryAsListOfDicts", return_value=rows):
+            with self.assertRaisesRegex(ValueError, "entity/X1 has no KGR<number> id"):
+                self.ws.endpoints.get_registry_metadata()
+
+    def test_get_wikidata_labels(self):
+        """
+        test that the Wikidata items among the metadata values get their
+        English label and nothing else is sent to Wikidata
+        """
+        metadata = {
+            "KGR7": {
+                "name": ["Culture Knowledge Graph"],
+                "consortium": ["http://www.wikidata.org/entity/Q98276929"],
+            }
+        }
+        labels = self.ws.endpoints.get_wikidata_labels(metadata)
+        if self.debug:
+            print(labels)
+        self.assertEqual(
+            {"http://www.wikidata.org/entity/Q98276929": "NFDI4Culture"}, labels
+        )
+        self.assertEqual({}, self.ws.endpoints.get_wikidata_labels({}))
+
+    def test_registry_cell(self):
+        """
+        test that Wikidata items show their label, URLs are links with the URL
+        as title and prose is shown as registered
+        """
+        item = "http://www.wikidata.org/entity/Q98276929"
+        labels = {item: "NFDI4Culture"}
+        url = "https://nfdi4culture.de/sparql"
+        for value, expected in [
+            (item, f'<a href="{item}" target="_blank" title="{item}">NFDI4Culture</a>'),
+            (
+                "http://www.wikidata.org/entity/Q1",
+                '<a href="http://www.wikidata.org/entity/Q1" target="_blank"'
+                ' title="http://www.wikidata.org/entity/Q1">Q1</a>',
+            ),
+            (url, f'<a href="{url}" target="_blank" title="{url}">{url}</a>'),
+            ("work in progress", "work in progress"),
+            ("https://a.org; https://b.org", "https://a.org; https://b.org"),
+            ("<b>", "&lt;b&gt;"),
+        ]:
+            self.assertEqual(expected, KgiSolution.registry_cell(value, labels))
+
+    def test_registry_rows(self):
+        """
+        test the rows of one knowledge graph: a header with its id, its name
+        and the issue link under Action, then one row per property with the
+        registered values - missing labelled - and no action
+        """
+        properties = {"name": "Name", "endpoint": "SPARQL endpoint", "api": "API"}
+        registered = {"name": ["ORKG"], "endpoint": ["https://a.org; https://b.org"]}
+        rows = KgiSolution.registry_rows("KGR43", registered, {}, properties)
+        if self.debug:
+            for row in rows:
+                print(row)
+        header = rows[0]
+        self.assertEqual("kg", header["kind"])
+        self.assertEqual(
+            '<span class="kgi-toggle"></span><b>KGR43</b>', header["property"]
+        )
+        self.assertEqual("<b>ORKG</b>", header["registered"])
+        self.assertTrue(header["action"].startswith('<b>(<a class="kgi-issue"'))
+        self.assertIn(RegistrationForm.NEW_ISSUE_URL, header["action"])
+        self.assertIn(">Open GitHub update issue</a>)</b>", header["action"])
+        by_property = {row["property"]: row for row in rows[1:]}
+        self.assertEqual(list(properties.values()), list(by_property))
+        self.assertEqual("ORKG", by_property["Name"]["registered"])
+        self.assertEqual(
+            "https://a.org; https://b.org",
+            by_property["SPARQL endpoint"]["registered"],
+        )
+        self.assertEqual("<i>missing</i>", by_property["API"]["registered"])
+        for row in rows[1:]:
+            self.assertEqual("", row["action"])
 
     def test_user_agent(self):
         """
