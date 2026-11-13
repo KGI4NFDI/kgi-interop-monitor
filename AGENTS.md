@@ -62,6 +62,7 @@ says a human stood behind it.
 | `src/kgi_interop_monitor/nicekgi.py` | `KgiWebserver` / `KgiSolution` / `KgiEndpointDashboard` / `Endpoints` - the NiceGUI page, its Consortium column and the endpoint list |
 | `src/kgi_interop_monitor/kgs.py` | `KnowledgeGraph` / `KnowledgeGraphs` - the model of the registry snapshot |
 | `src/kgi_interop_monitor/resources/knowledge_graphs.yaml` | the registry snapshot: name, consortium, website and endpoint per knowledge graph |
+| `src/kgi_interop_monitor/registration.py` | `RegistrationForm` - the registry's data contribution form filled with a record's registered values, as a link to a new GitHub issue |
 | `src/kgi_interop_monitor/cmd.py` | `KgiCmd` command line entry point |
 | `src/kgi_interop_monitor/__init__.py` | `__version__` - single source of the version |
 | `tests/` | unittest based tests (`ngwidgets.webserver_test.WebserverTest`) |

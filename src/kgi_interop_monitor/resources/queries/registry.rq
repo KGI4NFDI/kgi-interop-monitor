@@ -1,0 +1,29 @@
+# the fields of the registration form, one row per value, as
+# kgi4nfdi_registry_data/scripts/convert_yaml_to_rdf.py stores them
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX dct: <http://purl.org/dc/terms/>
+SELECT ?kg ?field ?value WHERE {
+  ?kg a dcat:Dataset .
+  {
+    ?kg dct:title ?value . BIND("name" AS ?field)
+  } UNION {
+    ?service dcat:servesDataset ?kg ; dcat:endpointURL ?value .
+    BIND("endpoint" AS ?field)
+  } UNION {
+    ?kg dcat:landingPage ?value . BIND("website" AS ?field)
+  } UNION {
+    ?kg dct:description ?value . BIND("description" AS ?field)
+  } UNION {
+    ?kg dct:creator ?value . BIND("consortium" AS ?field)
+  } UNION {
+    ?kg dct:publisher ?value . BIND("institution" AS ?field)
+  } UNION {
+    ?kg dcat:contactPoint ?value . BIND("contact" AS ?field)
+  } UNION {
+    ?kg dct:conformsTo ?value . BIND("ontologies" AS ?field)
+  } UNION {
+    ?kg dcat:distribution/dcat:accessURL ?value . BIND("api" AS ?field)
+  } UNION {
+    ?kg dcat:distribution/dcat:downloadURL ?value . BIND("dumps" AS ?field)
+  }
+}

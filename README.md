@@ -6,12 +6,9 @@
 [![API Docs](https://img.shields.io/badge/API-Documentation-blue)](https://KGI4NFDI.github.io/kgi-interop-monitor/)
 [![License](https://img.shields.io/github/license/KGI4NFDI/kgi-interop-monitor.svg)](https://opensource.org/licenses/MIT)
 
-A [nicescholia](https://github.com/WolfgangFahl/nicescholia) dashboard for the SPARQL
-endpoints of the [KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry, sorted by
-NFDI consortium. The endpoints come from a snapshot of the registry in
-[`knowledge_graphs.yaml`](src/kgi_interop_monitor/resources/knowledge_graphs.yaml)
-
-**Refresh** measures each of them with a triple count query.
+A [nicescholia](https://github.com/WolfgangFahl/nicescholia) dashboard for the knowledge
+graphs of the [KGI4NFDI](https://base4nfdi.de/projects/kgi4nfdi) registry: their
+registry metadata, with a link to update it, and the state of their SPARQL endpoints.
 
 ## Run locally
 
