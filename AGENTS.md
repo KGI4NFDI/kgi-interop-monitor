@@ -65,6 +65,7 @@ says a human stood behind it.
 | `src/kgi_interop_monitor/cmd.py` | `KgiCmd` command line entry point |
 | `src/kgi_interop_monitor/__init__.py` | `__version__` - single source of the version |
 | `tests/` | unittest based tests (`ngwidgets.webserver_test.WebserverTest`) |
+| `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md` | issue (standard, bugfix, epic) and pull request templates, adapted from MaRDI4NFDI's; every issue states acceptance criteria and every pull request says which issue it closes |
 
 `Endpoints.get_endpoints` is the whole customization surface: one
 `lodstorage.query.Endpoint` per registry record whose endpoint value is a URL,
