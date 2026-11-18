@@ -29,9 +29,16 @@ Example: "query-sets/orkg@orkg.org.yaml exists and every query in it passes test
 -->
 - [ ] first criterion
 
+**Epic or stand-alone**:
+<!--
+Exactly one line:
+Epic: #12               (or KGI4NFDI/other-repo#12, or the epic's URL)
+Stands alone: <the reason no epic tracks this issue>
+-->
+Epic: #
+
 **Checklist for this issue**:
 <!-- The following checks track the progress of the issue: -->
 - [ ] Assignee has been set for this issue
 - [ ] All fields of the issue have been filled
 - [ ] The plan in this issue was agreed before implementation (AGENTS.md, PLAN-AND-ASK)
-- [ ] Issue is tracked by an epic, or there is a reason it stands alone
