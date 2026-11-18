@@ -25,6 +25,15 @@ Steps or command to reproduce the behavior:
 (Versions of snapquery and Python, the query set or source concerned, and any other context.)
 
 
+**Epic or stand-alone**:
+<!--
+Exactly one line:
+Epic: #12               (or KGI4NFDI/other-repo#12, or the epic's URL)
+Stands alone: <the reason no epic tracks this issue>
+-->
+Epic: #
+
+
 **Checklist for this issue**:
 (Some checks for making sure this issue is completely formulated)
 - [ ] Assignee has been set for this issue
