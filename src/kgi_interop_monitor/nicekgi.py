@@ -462,6 +462,17 @@ class KgiSolution(InputWebSolution):
   content: "\25B8\00a0";
 }
 """
+    # the federation matrix: small text and tight cells, so that the whole
+    # matrix is in view - a 10px header still shows "KGR<n>" in full
+    FEDERATION_CSS = """
+.kgi-federation {
+  --ag-font-size: 11px;
+  --ag-cell-horizontal-padding: 2px;
+}
+.kgi-federation .ag-header-cell {
+  font-size: 10px;
+}
+"""
 
     def link_button(
         self, name: str, target: str, icon_name: str, new_tab: bool = True
@@ -557,7 +568,7 @@ class KgiSolution(InputWebSolution):
             endpoints = provider.get_endpoints()
             column_defs = [{"headerName": "Source", "field": "name", "pinned": "left"}]
             for key in endpoints:
-                column_defs.append({"headerName": key, "field": key, "width": 70})
+                column_defs.append({"headerName": key, "field": key, "width": 36})
 
             def show_matrix():
                 rows = []
@@ -615,8 +626,17 @@ class KgiSolution(InputWebSolution):
                 ui.button("Refresh", icon="refresh", on_click=refresh)
             hint = "click a cell for its query and error"
             detail = ui.code(hint, language="text")
-            options = {"columnDefs": column_defs, "rowData": []}
-            grid = ui.aggrid(options, auto_size_columns=False).classes("h-screen")
+            ui.add_css(self.FEDERATION_CSS)
+            options = {
+                "columnDefs": column_defs,
+                "rowData": [],
+                "rowHeight": 22,
+                "headerHeight": 24,
+                # as high as its rows, so the page does not scroll for the grid
+                "domLayout": "autoHeight",
+            }
+            grid = ui.aggrid(options, auto_size_columns=False).classes("kgi-federation")
+            grid.style("height: auto")
             grid.on("cellClicked", show_detail)
             show_matrix()
             ui.timer(1.0, show_progress)
