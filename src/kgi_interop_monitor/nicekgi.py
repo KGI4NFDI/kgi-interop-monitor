@@ -11,6 +11,7 @@ import html
 import json
 import os
 import re
+from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -18,7 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from lodstorage.query import Endpoint, Query
 from lodstorage.sparql import SPARQL
 from ngwidgets.input_webserver import InputWebserver, InputWebSolution, WebserverConfig
-from nicegui import Client, run, ui
+from nicegui import Client, app, run, ui
 from nscholia.endpoint_dashboard import EndpointDashboard
 from nscholia.endpoints import Endpoints as ScholiaEndpoints
 from nscholia.endpoints import UpdateStateCache
@@ -350,6 +351,12 @@ class KgiWebserver(InputWebserver):
     The main webserver class
     """
 
+    RESOURCES = Path(__file__).parent / "resources"
+    # assets/media/icon.png of KGI4NFDI/kgi4nfdi-website, branch dev
+    FAVICON = RESOURCES / "kgi4nfdi_icon.png"
+    LOGO = RESOURCES / "kgi4nfdi_logo.png"
+    LOGO_URL = "/kgi4nfdi_logo.png"
+
     @classmethod
     def get_config(cls) -> WebserverConfig:
         config = WebserverConfig(
@@ -369,6 +376,9 @@ class KgiWebserver(InputWebserver):
         self.update_state_cache = UpdateStateCache()
         # the last federation check, kept in memory only
         self.federation = {}
+        # one route for all clients: ui.image(<file>) adds a route that the
+        # first deleted client removes for every other client too
+        app.add_static_file(local_file=self.LOGO, url_path=self.LOGO_URL)
 
         @ui.page("/endpoints")
         async def endpoints(client: Client):
@@ -377,6 +387,29 @@ class KgiWebserver(InputWebserver):
         @ui.page("/federation")
         async def federation(client: Client):
             return await self.page(client, KgiSolution.federation)
+
+    def run(self, args: Namespace) -> None:
+        """
+        ngwidgets' run with the KGI favicon
+
+        Args:
+            args: the command line arguments
+        """
+        # TODO: drop this override once ngwidgets offers a favicon setting
+        self.args = args
+        self.debug = args.debug
+        self.optionalDebug(args)
+        self.configure_run()
+        ui.run(
+            title=self.config.version.name,
+            favicon=self.FAVICON,
+            host=args.host,
+            port=args.port,
+            show=args.client,
+            fastapi_docs=self.config.fastapi_docs,
+            reload=False,
+            storage_secret=self.config.storage_secret,
+        )
 
 
 class KgiSolution(InputWebSolution):
@@ -505,14 +538,13 @@ class KgiSolution(InputWebSolution):
             detailed: if True add github, chat and help links
         """
         super().setup_menu(detailed)
-        logo = Path(__file__).parent / "resources" / "kgi4nfdi_logo.png"
         kgi4nfdi_url = "https://base4nfdi.de/projects/kgi4nfdi"
         # name and logo stay together, at the right also when the menu wraps
         with self.header.classes("items-center"):
             with ui.row().classes("ml-auto items-center no-wrap"):
                 ui.label(self.config.version.name).classes("text-h6")
                 with ui.link(target=kgi4nfdi_url, new_tab=True):
-                    ui.image(logo).props("fit=contain").style(
+                    ui.image(KgiWebserver.LOGO_URL).props("fit=contain").style(
                         "height: 36px; width: 148px"
                     )
 
