@@ -165,6 +165,24 @@ class Endpoints(ScholiaEndpoints):
             endpoints[key] = endpoint
         return endpoints
 
+    def probed_instead(self, key: str, fields: Dict[str, List[str]]) -> Optional[str]:
+        """
+        the endpoint_url probed instead of the live registered endpoint - only
+        while the registry still holds the value the endpoint_url replaces
+
+        Args:
+            key: the registry id
+            fields: the live registered values per field
+
+        Returns:
+            the endpoint_url, None when there is nothing to flag
+        """
+        kg = self.kgs.kgs.get(key)
+        endpoint_url = None
+        if kg and kg.endpoint in fields.get("endpoint", []):
+            endpoint_url = kg.endpoint_url
+        return endpoint_url
+
     @classmethod
     def query(cls, name: str) -> str:
         """
@@ -874,14 +892,13 @@ class KgiSolution(InputWebSolution):
                     return
                 rows = []
                 for key, fields in metadata.items():
-                    kg = provider.kgs.kgs.get(key)
                     rows.extend(
                         self.registry_rows(
                             key,
                             fields,
                             labels,
                             provider.REGISTRY_FIELDS,
-                            kg.endpoint_url if kg else None,
+                            provider.probed_instead(key, fields),
                         )
                     )
                 grid.options["rowData"] = rows

@@ -38,6 +38,7 @@ MAX_CANDIDATES = 10
 URL_RE = re.compile(r"https?://[^\s;,<>\"'|]+", re.I)
 ASK_QUERY = "ASK {}"
 SPARQL_JSON = "application/sparql-results+json"
+NOTHING_ANSWERS = "nothing answers"
 
 
 def candidates(url: str) -> List[str]:
@@ -158,7 +159,7 @@ def find_endpoint_url(
             candidate for candidate in candidates(url) if candidate not in tries
         )
     if not answers_ask(endpoint, timeout):
-        reason = "nothing answers"
+        reason = NOTHING_ANSWERS
         for candidate in tries[:MAX_CANDIDATES]:
             if answers_ask(candidate, timeout):
                 endpoint_url = candidate
@@ -170,7 +171,8 @@ def find_endpoint_url(
 def update(kgs: KnowledgeGraphs, timeout: float = 15.0) -> Dict[str, Optional[str]]:
     """
     set or remove endpoint_url for every knowledge graph whose registered
-    endpoint value is a URL
+    endpoint value is a URL - when nothing answers, the host may just be down,
+    so an endpoint_url found earlier stays
 
     Args:
         kgs: the knowledge graphs, changed in place
@@ -184,9 +186,10 @@ def update(kgs: KnowledgeGraphs, timeout: float = 15.0) -> Dict[str, Optional[st
         if not kg.endpoint_is_url:
             continue
         endpoint_url, reason = find_endpoint_url(kg.endpoint, timeout)
-        print(f"{key}: {kg.endpoint} -> {endpoint_url or '-'} ({reason})")
-        kg.endpoint_url = endpoint_url
-        changes[key] = endpoint_url
+        if reason != NOTHING_ANSWERS:
+            kg.endpoint_url = endpoint_url
+        print(f"{key}: {kg.endpoint} -> {kg.endpoint_url or '-'} ({reason})")
+        changes[key] = kg.endpoint_url
     return changes
 
 
@@ -214,7 +217,7 @@ def write_endpoint_urls(yaml_path: str, kgs: KnowledgeGraphs) -> None:
             endpoint_url = kgs.kgs[key].endpoint_url
             if endpoint_url:
                 out.append(f"    endpoint_url: {endpoint_url}")
-    with open(yaml_path, "w", encoding="utf-8") as stream:
+    with open(yaml_path, "w", encoding="utf-8", newline="\n") as stream:
         stream.write("\n".join(out) + "\n")
 
 
