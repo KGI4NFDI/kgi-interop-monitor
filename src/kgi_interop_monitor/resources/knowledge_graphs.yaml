@@ -22,6 +22,7 @@ kgs:
     name: Das Datenportal für Deutschland
     website: https://www.govdata.de
     endpoint: https://www.govdata.de/web/guest/sparql-assistent
+    endpoint_url: https://www.govdata.de/sparql
   KGR11:
     name: Data Set Knowledge Graph (DSKG)
     website: http://dskg.org
@@ -29,11 +30,13 @@ kgs:
   KGR14:
     name: dblp computer science bibliography
     endpoint: https://sparql.dblp.org
+    endpoint_url: https://sparql.dblp.org/sparql
   KGR16:
     name: FactGRID
     consortium: NFDI4Memory
     website: https://database.factgrid.de
     endpoint: https://database.factgrid.de/query
+    endpoint_url: https://database.factgrid.de/sparql
   KGR19:
     name: Gemeinsame Normdatei (GND)
     consortium: Text+
@@ -52,11 +55,13 @@ kgs:
     name: LinkedOpenData-Service des B3Kat
     website: http://lod.b3kat.de/doc/de/willkommen-beim-linkedopendata-service-des-b3kat-lodb3katde
     endpoint: https://lod.b3kat.de/doc/sparql-endpoint
+    endpoint_url: https://lod.b3kat.de/sparql
   KGR28:
     name: MaRDI portal
     consortium: MaRDI
     website: https://portal.mardi4nfdi.de
     endpoint: https://query.portal.mardi4nfdi.de
+    endpoint_url: https://query.portal.mardi4nfdi.de/sparql
   KGR31:
     name: MaschinenBauIndustrie KG
     consortium: BERD@NFDI
@@ -81,11 +86,13 @@ kgs:
     consortium: NFDI4Objects
     website: https://nomisma.org
     endpoint: https://nomisma.org/sparql/
+    endpoint_url: https://nomisma.org/query
   KGR43:
     name: Open Research Knowledge Graph
     consortium: NFDI4DataScience
     website: https://orkg.org
     endpoint: https://orkg.org/triplestore; https://orkg.org/sparql
+    endpoint_url: https://orkg.org/triplestore
   KGR46:
     name: OpenAIRE Research Graph
     website: https://explore.openaire.eu ; https://monitor.openaire.eu ; https://osobservatory.openaire.eu
@@ -103,6 +110,7 @@ kgs:
     consortium: NFDI4Culture
     website: https://wikibase.semantic-kompakkt.de
     endpoint: https://query.semantic-kompakkt.de
+    endpoint_url: https://query.semantic-kompakkt.de/sparql
   KGR54:
     name: SoftwareKG
     consortium: NFDI4DataScience
@@ -134,11 +142,13 @@ kgs:
     name: Wikidata
     website: https://www.wikidata.org
     endpoint: https://query.wikidata.org
+    endpoint_url: https://query.wikidata.org/sparql
   KGR72:
     name: Semantic Kompakkt
     consortium: NFDI4Culture
     website: https://wikibase.semantic-kompakkt.de/wiki/Main_Page
     endpoint: https://query.semantic-kompakkt.de/
+    endpoint_url: https://query.semantic-kompakkt.de/sparql
   KGR74:
     name: Materials Science and Engineering Knowledge Graph
     consortium: NFDI-MatWerk
@@ -159,6 +169,7 @@ kgs:
     consortium: NFDI4Memory
     website: https://database.factgrid.de/wiki/Main_Page
     endpoint: https://database.factgrid.de/query/
+    endpoint_url: https://database.factgrid.de/sparql
   KGR85:
     name: RADAR
     consortium: Base4NFDI, NFDI4Chem, NFDI4Culture, NFDI4Memory

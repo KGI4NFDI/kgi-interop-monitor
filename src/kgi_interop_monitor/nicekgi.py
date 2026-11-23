@@ -15,6 +15,7 @@ from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.error import HTTPError
 
 from lodstorage.query import Endpoint, Query
 from lodstorage.sparql import SPARQL
@@ -87,6 +88,8 @@ class Endpoints(ScholiaEndpoints):
     NO_CONSORTIUM = "(no consortium in the registry)"
     # the id of a registry record: KGR and its number
     REGISTRY_ID = re.compile(r"KGR\d+")
+    # the HTTP status codes of a server that may accept the query by GET
+    POST_REFUSED = (403, 405)
     # the fields of the registration form as resources/queries/registry.rq
     # names them, with their column header
     REGISTRY_FIELDS = {
@@ -155,12 +158,30 @@ class Endpoints(ScholiaEndpoints):
             if not kg.endpoint_is_url:
                 continue
             endpoint = Endpoint(
-                name=kg.name, lang="sparql", endpoint=kg.endpoint, website=kg.website
+                name=kg.name, lang="sparql", endpoint=kg.probe_url, website=kg.website
             )
             # the Consortium column shows this non-field attribute
             endpoint.group = kg.consortium or self.NO_CONSORTIUM
             endpoints[key] = endpoint
         return endpoints
+
+    def probed_instead(self, key: str, fields: Dict[str, List[str]]) -> Optional[str]:
+        """
+        the endpoint_url probed instead of the live registered endpoint - only
+        while the registry still holds the value the endpoint_url replaces
+
+        Args:
+            key: the registry id
+            fields: the live registered values per field
+
+        Returns:
+            the endpoint_url, None when there is nothing to flag
+        """
+        kg = self.kgs.kgs.get(key)
+        endpoint_url = None
+        if kg and kg.endpoint in fields.get("endpoint", []):
+            endpoint_url = kg.endpoint_url
+        return endpoint_url
 
     @classmethod
     def query(cls, name: str) -> str:
@@ -179,7 +200,8 @@ class Endpoints(ScholiaEndpoints):
 
     def runQuery(self, query: Query) -> Optional[List[Dict[str, Any]]]:
         """
-        nicescholia's runQuery, sent with the user agent of this project
+        nicescholia's runQuery, sent with the user agent of this project -
+        by POST, and once more by GET when the server refuses the POST
 
         Args:
             query: the query to run
@@ -190,9 +212,14 @@ class Endpoints(ScholiaEndpoints):
         endpoint = SPARQL(query.endpoint, agent=USER_AGENT)
         if query.params.has_params:
             query.apply_default_params()
-        qlod = endpoint.queryAsListOfDicts(
-            query.query, param_dict=query.params.params_dict
-        )
+        params = query.params.params_dict
+        try:
+            qlod = endpoint.queryAsListOfDicts(query.query, param_dict=params)
+        except HTTPError as ex:
+            if ex.code not in self.POST_REFUSED:
+                raise
+            endpoint.method = "GET"
+            qlod = endpoint.queryAsListOfDicts(query.query, param_dict=params)
         return qlod
 
     def check_federation(self) -> Dict[str, Dict[str, Optional[str]]]:
@@ -329,6 +356,34 @@ class KgiEndpointDashboard(EndpointDashboard):
                 )
         return column_defs
 
+    def mark_repaired(self, rows: List[dict]) -> List[dict]:
+        """
+        mark the rows probed at an endpoint_url instead of the registered
+        endpoint with 🔧, both URLs in its tooltip
+
+        Args:
+            rows: the AG Grid rows, changed in place
+
+        Returns:
+            the rows
+        """
+        kgs = self.endpoints_provider.kgs.kgs
+        # wide enough for "Link 🔧" - a minimum, so auto-sizing keeps it
+        for column_def in self.grid.ag_grid.options["columnDefs"]:
+            if column_def.get("field") == "link":
+                column_def["minWidth"] = 80
+        for row in rows:
+            kg = kgs.get(row.get("endpoint_key"))
+            if kg and kg.endpoint_url:
+                tooltip = html.escape(
+                    f"registered: {kg.endpoint}\nprobed: {kg.endpoint_url}",
+                    quote=True,
+                )
+                row[
+                    "link"
+                ] += f' <span class="kgi-repaired" title="{tooltip}">🔧</span>'
+        return rows
+
     def setup_ui(self):
         """
         render nicescholia's dashboard, mark it as beta and show the Consortium
@@ -340,6 +395,7 @@ class KgiEndpointDashboard(EndpointDashboard):
             if getattr(element, "text", None) == "Endpoint Monitor":
                 element.text = "Endpoint Monitor (Beta)"
         self.show_consortium(self.grid.ag_grid.options["columnDefs"])
+        self.mark_repaired(self.grid.ag_grid.options["rowData"])
         self.grid.update()
         # never measured, or longer ago than nicescholia's daily refresh
         if self.update_state_cache.is_stale:
@@ -734,6 +790,7 @@ class KgiSolution(InputWebSolution):
         fields: Dict[str, List[str]],
         labels: Dict[str, str],
         properties: Dict[str, str],
+        endpoint_url: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """
         the rows of one knowledge graph: a header with its id, its name under
@@ -744,6 +801,8 @@ class KgiSolution(InputWebSolution):
             fields: the registered values per field
             labels: the English labels of the Wikidata items
             properties: the fields to show, with their names
+            endpoint_url: the URL the Endpoint Monitor probes instead of the
+                registered endpoint, None when it probes the registered one
 
         Returns:
             the rows
@@ -760,7 +819,17 @@ class KgiSolution(InputWebSolution):
             }
         ]
         for field, header in properties.items():
-            rows.append(cls.property_row(key, header, fields.get(field, []), labels))
+            row = cls.property_row(key, header, fields.get(field, []), labels)
+            if field == "endpoint" and endpoint_url:
+                tooltip = html.escape(
+                    "not a SPARQL protocol URL - the Endpoint Monitor probes "
+                    f"{endpoint_url} instead 🔧",
+                    quote=True,
+                )
+                row[
+                    "registered"
+                ] += f' <span class="kgi-warning" title="{tooltip}">⚠️</span>'
+            rows.append(row)
         return rows
 
     @staticmethod
@@ -825,7 +894,11 @@ class KgiSolution(InputWebSolution):
                 for key, fields in metadata.items():
                     rows.extend(
                         self.registry_rows(
-                            key, fields, labels, provider.REGISTRY_FIELDS
+                            key,
+                            fields,
+                            labels,
+                            provider.REGISTRY_FIELDS,
+                            provider.probed_instead(key, fields),
                         )
                     )
                 grid.options["rowData"] = rows
