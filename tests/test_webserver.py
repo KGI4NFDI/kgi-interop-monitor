@@ -9,12 +9,17 @@ import contextlib
 import copy
 import io
 import os
+import re
+import time
 from pathlib import Path
 from typing import Callable
 from unittest.mock import patch
 
+from fastapi.testclient import TestClient
 from lodstorage.sparql import SPARQL
 from ngwidgets.webserver_test import WebserverTest
+from nicegui import Client, app, core, ui
+from nicegui.page import page
 
 from kgi_interop_monitor import nicekgi
 from kgi_interop_monitor.cmd import KgiCmd
@@ -72,6 +77,70 @@ class TestKgiWebserver(WebserverTest):
         """
         logo = Path(nicekgi.__file__).parent / "resources" / "kgi4nfdi_logo.png"
         self.assertEqual(b"PNG", logo.read_bytes()[1:4])
+
+    def wait_for_server(self):
+        """
+        wait until the server thread has started once: the run configuration
+        and the /favicon.ico route stay for the later tests of this process
+        """
+        deadline = time.time() + 10
+        started = False
+        while not started and time.time() < deadline:
+            started = any(
+                getattr(route, "path", None) == "/favicon.ico" for route in app.routes
+            )
+            time.sleep(0.05)
+        self.assertTrue(started)
+
+    def render(self, path: str) -> str:
+        """
+        get a page on an event loop of its own: ngwidgets' test server stops
+        after the first test and closes NiceGUI's loop
+
+        Args:
+            path: the path of the page
+
+        Returns:
+            the HTML of the page
+        """
+        self.wait_for_server()
+
+        async def on_own_loop(scope, receive, send):
+            core.loop = asyncio.get_running_loop()
+            await self.ws.app(scope, receive, send)
+
+        with patch.object(core, "loop", core.loop):
+            response = TestClient(on_own_loop).get(path)
+        self.assertEqual(200, response.status_code)
+        html = response.text
+        return html
+
+    def test_favicon(self):
+        """
+        test that a served page links the favicon and that its URL serves the
+        KGI icon
+        """
+        html = self.render("/about")
+        link = re.search(r'<link href="([^"]+)" rel="shortcut icon"', html)
+        self.assertEqual("/favicon.ico", link.group(1))
+        icon = KgiWebserver.RESOURCES / "kgi4nfdi_icon.png"
+        self.assertEqual(icon.read_bytes(), self.get_response(link.group(1)).content)
+
+    def test_logo_survives_deleted_client(self):
+        """
+        test that the logo URL of the menu banner still serves the logo after
+        a client that showed it was deleted
+        """
+        self.wait_for_server()
+        with Client(page(""), request=None) as client:
+            KgiSolution(self.ws, client).setup_menu()
+        images = [e for e in client.elements.values() if isinstance(e, ui.image)]
+        url = images[0].props["src"]
+        self.assertTrue(url.endswith("kgi4nfdi_logo.png"), url)
+        # what NiceGUI calls on each element of a deleted client
+        images[0]._handle_delete()
+        logo = KgiWebserver.RESOURCES / "kgi4nfdi_logo.png"
+        self.assertEqual(logo.read_bytes(), self.get_response(url).content)
 
     def test_endpoints(self):
         """
