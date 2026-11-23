@@ -4,8 +4,13 @@ Created on 2026-09-29
 @author: danielviladrich
 """
 
+import asyncio
+import contextlib
+import copy
+import io
 import os
 from pathlib import Path
+from typing import Callable
 from unittest.mock import patch
 
 from lodstorage.sparql import SPARQL
@@ -141,6 +146,84 @@ class TestKgiWebserver(WebserverTest):
             matrix = self.ws.endpoints.check_federation()
         for source, row in matrix.items():
             self.assertEqual({source: "OSError: down"}, row)
+
+    @staticmethod
+    async def io_bound(func: Callable) -> dict:
+        """
+        run.io_bound without the thread pool of the stopped test server
+        """
+        result = func()
+        return result
+
+    def run_federation_check(self, **check) -> None:
+        """
+        run the webserver's federation check - no endpoint is queried here
+
+        Args:
+            **check: how the mocked check_federation behaves
+        """
+        with patch.object(nicekgi.run, "io_bound", self.io_bound):
+            with patch.object(self.ws.endpoints, "check_federation", **check) as run:
+                asyncio.run(self.ws.run_federation_check())
+        self.check_calls = run.call_count
+
+    def test_federation_check_only_when_serving(self):
+        """
+        test that --serve starts the check at server start and that the test
+        server, which has no --serve, never does
+        """
+        self.assertFalse(self.ws.args.serve)
+        for serve, calls in [(False, 0), (True, 1)]:
+            self.ws.args = copy.copy(self.ws.args)
+            self.ws.args.serve = serve
+            with patch.object(nicekgi.app, "on_startup") as on_startup:
+                self.ws.configure_run()
+            self.assertEqual(calls, on_startup.call_count)
+        on_startup.assert_called_once_with(self.ws.run_federation_check)
+
+    def test_run_federation_check(self):
+        """
+        test that a check stores its matrix and frees the guard for Refresh
+        """
+        matrix = {"KGR7": {"KGR7": None}}
+        self.run_federation_check(return_value=matrix)
+        self.assertEqual(matrix, self.ws.federation)
+        self.assertIsNone(self.ws.endpoints.checked_sources)
+
+    def test_run_federation_check_guard(self):
+        """
+        test that no second check starts while one runs
+        """
+        self.ws.endpoints.checked_sources = 3
+        self.run_federation_check(return_value={"KGR7": {}})
+        self.assertEqual(0, self.check_calls)
+        self.assertEqual(3, self.ws.endpoints.checked_sources)
+        self.assertEqual({}, self.ws.federation)
+
+    def test_run_federation_check_failure(self):
+        """
+        test that a failed check keeps the last matrix and the next check runs
+        """
+        matrix = {"KGR7": {"KGR7": None}}
+        self.ws.federation = matrix
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.run_federation_check(side_effect=OSError("down"))
+        self.assertIn("OSError: down", stderr.getvalue())
+        self.assertEqual(matrix, self.ws.federation)
+        self.assertIsNone(self.ws.endpoints.checked_sources)
+        self.run_federation_check(return_value={"KGR4": {"KGR4": None}})
+        self.assertEqual(1, self.check_calls)
+        self.assertIn("KGR4", self.ws.federation)
+
+    def test_run_federation_check_server_stops(self):
+        """
+        test that a check cut off by the server stop keeps the last matrix
+        """
+        matrix = {"KGR7": {"KGR7": None}}
+        self.ws.federation = matrix
+        self.run_federation_check(return_value=None)
+        self.assertEqual(matrix, self.ws.federation)
 
     def test_get_registry_metadata(self):
         """
