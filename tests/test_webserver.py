@@ -10,6 +10,7 @@ import re
 import time
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from fastapi.testclient import TestClient
 from lodstorage.sparql import SPARQL
@@ -335,3 +336,37 @@ class TestKgiWebserver(WebserverTest):
         with patch("kgi_interop_monitor.nicekgi.SPARQL") as sparql:
             endpoints.runQuery(query)
         sparql.assert_called_once_with(endpoint.endpoint, agent=USER_AGENT)
+
+    def test_post_then_get(self):
+        """
+        test that a query the server refuses by POST is sent once more by
+        GET, and that any other HTTP error is not retried
+        """
+        endpoints = self.ws.endpoints
+        endpoint = list(endpoints.get_endpoints().values())[0]
+        query = endpoints.triple_count_query_for_endpoint(endpoint)
+        for code, expected in [
+            (403, ["POST", "GET"]),
+            (405, ["POST", "GET"]),
+            (502, ["POST"]),
+        ]:
+            methods = []
+
+            def answer(sparql, *_args, **_kwargs):
+                methods.append(sparql.method)
+                if sparql.method == "POST":
+                    raise HTTPError(endpoint.endpoint, code, "refused", None, None)
+                return [{"tripleCount": 1}]
+
+            with (
+                self.subTest(code=code),
+                patch.object(
+                    SPARQL, "queryAsListOfDicts", autospec=True, side_effect=answer
+                ),
+            ):
+                if code == 502:
+                    with self.assertRaises(HTTPError):
+                        endpoints.runQuery(query)
+                else:
+                    self.assertEqual([{"tripleCount": 1}], endpoints.runQuery(query))
+                self.assertEqual(expected, methods)
