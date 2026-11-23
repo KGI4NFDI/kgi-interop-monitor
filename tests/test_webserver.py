@@ -12,8 +12,10 @@ import os
 import re
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Callable
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from fastapi.testclient import TestClient
 from lodstorage.sparql import SPARQL
@@ -23,6 +25,7 @@ from nicegui.page import page
 
 from kgi_interop_monitor import nicekgi
 from kgi_interop_monitor.cmd import KgiCmd
+from kgi_interop_monitor.kgs import KnowledgeGraph
 from kgi_interop_monitor.nicekgi import (
     USER_AGENT,
     KgiEndpointDashboard,
@@ -187,6 +190,58 @@ class TestKgiWebserver(WebserverTest):
         self.assertFalse(consortium["hide"])
         self.assertNotIn("rowGroup", consortium)
         self.assertEqual("name", column_defs[1]["field"])
+
+    def test_mark_repaired(self):
+        """
+        test that only a rerouted row gets the wrench, with both URLs in its
+        tooltip, and that the URL column stays wide enough to show it
+        """
+        kgs = {
+            "KGR1": KnowledgeGraph(
+                name="rerouted",
+                endpoint="https://a.example.org/query",
+                endpoint_url="https://a.example.org/sparql",
+            ),
+            "KGR2": KnowledgeGraph(
+                name="registered", endpoint="https://b.example.org/sparql"
+            ),
+        }
+        column_defs = [{"field": "link", "width": 70}]
+        dashboard = SimpleNamespace(
+            endpoints_provider=SimpleNamespace(kgs=SimpleNamespace(kgs=kgs)),
+            grid=SimpleNamespace(
+                ag_grid=SimpleNamespace(options={"columnDefs": column_defs})
+            ),
+        )
+        rows = [
+            {"endpoint_key": "KGR1", "link": "<a>Link</a>"},
+            {"endpoint_key": "KGR2", "link": "<a>Link</a>"},
+        ]
+        KgiEndpointDashboard.mark_repaired(dashboard, rows)
+        self.assertIn("🔧", rows[0]["link"])
+        self.assertIn("registered: https://a.example.org/query", rows[0]["link"])
+        self.assertIn("probed: https://a.example.org/sparql", rows[0]["link"])
+        self.assertEqual("<a>Link</a>", rows[1]["link"])
+        self.assertEqual(80, column_defs[0]["minWidth"])
+
+    def test_registry_rows_flag_probed_endpoint(self):
+        """
+        test that the registered endpoint stays and gets the warning sign with
+        the probed URL in its tooltip - only on the endpoint row
+        """
+        properties = {"name": "Name", "endpoint": "SPARQL endpoint"}
+        registered = {"name": ["KG"], "endpoint": ["https://a.example.org/query"]}
+        rows = KgiSolution.registry_rows(
+            "KGR1", registered, {}, properties, "https://a.example.org/sparql"
+        )
+        by_property = {row["property"]: row for row in rows[1:]}
+        endpoint = by_property["SPARQL endpoint"]["registered"]
+        self.assertIn("https://a.example.org/query", endpoint)
+        self.assertIn("⚠️", endpoint)
+        self.assertIn("probes https://a.example.org/sparql instead", endpoint)
+        self.assertNotIn("⚠️", by_property["Name"]["registered"])
+        unflagged = KgiSolution.registry_rows("KGR1", registered, {}, properties)
+        self.assertFalse(any("⚠️" in row["registered"] for row in unflagged))
 
     def test_check_federation(self):
         """
@@ -417,3 +472,37 @@ class TestKgiWebserver(WebserverTest):
         with patch("kgi_interop_monitor.nicekgi.SPARQL") as sparql:
             endpoints.runQuery(query)
         sparql.assert_called_once_with(endpoint.endpoint, agent=USER_AGENT)
+
+    def test_post_then_get(self):
+        """
+        test that a query the server refuses by POST is sent once more by
+        GET, and that any other HTTP error is not retried
+        """
+        endpoints = self.ws.endpoints
+        endpoint = list(endpoints.get_endpoints().values())[0]
+        query = endpoints.triple_count_query_for_endpoint(endpoint)
+        for code, expected in [
+            (403, ["POST", "GET"]),
+            (405, ["POST", "GET"]),
+            (502, ["POST"]),
+        ]:
+            methods = []
+
+            def answer(sparql, *_args, **_kwargs):
+                methods.append(sparql.method)
+                if sparql.method == "POST":
+                    raise HTTPError(endpoint.endpoint, code, "refused", None, None)
+                return [{"tripleCount": 1}]
+
+            with (
+                self.subTest(code=code),
+                patch.object(
+                    SPARQL, "queryAsListOfDicts", autospec=True, side_effect=answer
+                ),
+            ):
+                if code == 502:
+                    with self.assertRaises(HTTPError):
+                        endpoints.runQuery(query)
+                else:
+                    self.assertEqual([{"tripleCount": 1}], endpoints.runQuery(query))
+                self.assertEqual(expected, methods)

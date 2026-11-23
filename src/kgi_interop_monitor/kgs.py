@@ -27,6 +27,18 @@ class KnowledgeGraph:
     # dcat:endpointURL exactly as the registry stores it - can be prose or
     # several URLs packed into one value
     endpoint: Optional[str] = None
+    # the value dcat:endpointURL should hold, set by scripts/endpoint_urls
+    # only while the registered endpoint does not answer ASK {} by itself
+    endpoint_url: Optional[str] = None
+
+    @property
+    def probe_url(self) -> Optional[str]:
+        """
+        the URL the Endpoint Monitor probes: endpoint_url where it is set,
+        the registered endpoint otherwise
+        """
+        probe_url = self.endpoint_url or self.endpoint
+        return probe_url
 
     @property
     def endpoint_is_url(self) -> bool:

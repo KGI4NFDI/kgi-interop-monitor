@@ -6,7 +6,8 @@ Created on 2026-09-29
 
 from basemkit.basetest import Basetest
 
-from kgi_interop_monitor.kgs import KnowledgeGraphs
+from kgi_interop_monitor.kgs import KnowledgeGraph, KnowledgeGraphs
+from kgi_interop_monitor.nicekgi import Endpoints
 
 
 class TestKnowledgeGraphs(Basetest):
@@ -53,3 +54,55 @@ class TestKnowledgeGraphs(Basetest):
         kg = KnowledgeGraphs.of_yaml().kgs["KGR19"]
         self.assertEqual("work in progress", kg.endpoint)
         self.assertFalse(kg.endpoint_is_url)
+
+    def test_shipped_endpoint_urls(self):
+        """
+        test that every shipped endpoint_url is a URL replacing a registered
+        URL value
+        """
+        for key, kg in KnowledgeGraphs.of_yaml().kgs.items():
+            if kg.endpoint_url:
+                self.assertTrue(kg.endpoint_url.startswith("http"), key)
+                self.assertTrue(kg.endpoint_is_url, key)
+                self.assertNotEqual(kg.endpoint, kg.endpoint_url, key)
+
+    def test_get_endpoints_probes_endpoint_url(self):
+        """
+        test that the monitor probes endpoint_url where it is set and the
+        registered endpoint otherwise
+        """
+        provider = Endpoints()
+        provider.kgs.kgs = {
+            "KGR1": KnowledgeGraph(
+                name="rerouted",
+                endpoint="https://a.example.org/query",
+                endpoint_url="https://a.example.org/sparql",
+            ),
+            "KGR2": KnowledgeGraph(
+                name="registered", endpoint="https://b.example.org/sparql"
+            ),
+        }
+        endpoints = provider.get_endpoints()
+        self.assertEqual("https://a.example.org/sparql", endpoints["KGR1"].endpoint)
+        self.assertEqual("https://b.example.org/sparql", endpoints["KGR2"].endpoint)
+
+    def test_probed_instead(self):
+        """
+        test that the registered value is flagged only while the registry
+        still holds the value the endpoint_url replaces
+        """
+        provider = Endpoints()
+        provider.kgs.kgs = {
+            "KGR1": KnowledgeGraph(
+                name="rerouted",
+                endpoint="https://a.example.org/query",
+                endpoint_url="https://a.example.org/sparql",
+            )
+        }
+        same = {"endpoint": ["https://a.example.org/query"]}
+        fixed = {"endpoint": ["https://a.example.org/sparql"]}
+        self.assertEqual(
+            "https://a.example.org/sparql", provider.probed_instead("KGR1", same)
+        )
+        self.assertIsNone(provider.probed_instead("KGR1", fixed))
+        self.assertIsNone(provider.probed_instead("KGR99", same))

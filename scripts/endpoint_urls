@@ -1,0 +1,5 @@
+#!/bin/bash
+# danielviladrich 2026-11-19
+# probe the registered SPARQL endpoints and set or remove endpoint_url in
+# src/kgi_interop_monitor/resources/knowledge_graphs.yaml
+python -m kgi_interop_monitor.endpoint_urls "$@"
