@@ -11,6 +11,7 @@ import html
 import json
 import os
 import re
+import traceback
 from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
@@ -444,6 +445,35 @@ class KgiWebserver(InputWebserver):
         async def federation(client: Client):
             return await self.page(client, KgiSolution.federation)
 
+    def configure_run(self):
+        """
+        check federation in the background when the server starts - only with
+        --serve, so that the test server never queries the partner endpoints
+        """
+        super().configure_run()
+        if self.args.serve:
+            app.on_startup(self.run_federation_check)
+
+    async def run_federation_check(self) -> None:
+        """
+        run one federation check, unless one is running; a failed check keeps
+        the last matrix and leaves Refresh usable
+        """
+        provider = self.endpoints
+        if provider.checked_sources is not None:
+            return
+        provider.checked_sources = 0
+        try:
+            matrix = await run.io_bound(provider.check_federation)
+            # None when the server stops during the check
+            if matrix is not None:
+                self.federation = matrix
+        except Exception:
+            # on stderr, so that it reaches the container log
+            traceback.print_exc()
+        finally:
+            provider.checked_sources = None
+
     def run(self, args: Namespace) -> None:
         """
         ngwidgets' run with the KGI favicon
@@ -658,7 +688,11 @@ class KgiSolution(InputWebSolution):
             for key in endpoints:
                 column_defs.append({"headerName": key, "field": key, "width": 36})
 
+            shown = None
+
             def show_matrix():
+                nonlocal shown
+                shown = self.webserver.federation
                 rows = []
                 for source, errors in self.webserver.federation.items():
                     row = {"key": source, "name": f"{source} {endpoints[source].name}"}
@@ -671,17 +705,6 @@ class KgiSolution(InputWebSolution):
                 grid.options["rowData"] = rows
                 grid.update()
 
-            async def refresh():
-                if provider.checked_sources is not None:
-                    return
-                provider.checked_sources = 0
-                try:
-                    self.webserver.federation = await run.io_bound(
-                        provider.check_federation
-                    )
-                finally:
-                    provider.checked_sources = None
-
             def show_progress():
                 checked = provider.checked_sources
                 if checked is not None:
@@ -690,6 +713,8 @@ class KgiSolution(InputWebSolution):
                     )
                 elif detail.content.startswith("Checking"):
                     detail.content = hint
+                # also a check that ended between two ticks of this timer
+                if checked is None and self.webserver.federation is not shown:
                     show_matrix()
 
             def show_detail(event):
@@ -711,7 +736,11 @@ class KgiSolution(InputWebSolution):
             # titled like nicescholia's Endpoint Monitor
             with ui.row().classes("w-full items-center mb-4"):
                 ui.label("Federation Monitor (Beta)").classes("text-2xl font-bold")
-                ui.button("Refresh", icon="refresh", on_click=refresh)
+                ui.button(
+                    "Refresh",
+                    icon="refresh",
+                    on_click=self.webserver.run_federation_check,
+                )
             hint = "click a cell for its query and error"
             detail = ui.code(hint, language="text")
             ui.add_css(self.FEDERATION_CSS)
